@@ -1,0 +1,1101 @@
+{
+  "meta": {
+    "generated_at": "2026-02-25T20:15:44.394991+00:00",
+    "prompt": "Plan a 3-day trip to Tokyo",
+    "models_used": {
+      "embeddings": "text-embedding-3-small",
+      "chat": "gpt-4o",
+      "tokenizer": "cl100k_base"
+    }
+  },
+  "userMessage": "Plan a 3-day trip to Tokyo",
+  "layer1_rawInput": {
+    "user_message": "Plan a 3-day trip to Tokyo",
+    "timestamp": "2026-02-25T20:15:21.060881+00:00",
+    "session_id": null
+  },
+  "layer2_tokenization": {
+    "input_text": "Plan a 3-day trip to Tokyo",
+    "token_ids": [
+      21119,
+      264,
+      220,
+      18,
+      11477,
+      8577,
+      311,
+      27286
+    ],
+    "tokens": [
+      "Plan",
+      " a",
+      " ",
+      "3",
+      "-day",
+      " trip",
+      " to",
+      " Tokyo"
+    ],
+    "num_tokens": 8,
+    "encoding_method": "tiktoken (cl100k_base)",
+    "vocab_size": 100277,
+    "code": "import tiktoken\n\nencoder = tiktoken.get_encoding(\"cl100k_base\")\ntext = \"Plan a 3-day trip to Tokyo\"\ntoken_ids = encoder.encode(text)\n# Output: [21119, 264, 220, 18, 11477, 8577, 311, 27286]"
+  },
+  "layer3_embeddings": {
+    "token_ids": [
+      21119,
+      264,
+      220,
+      18,
+      11477,
+      8577,
+      311,
+      27286
+    ],
+    "embedding_model": "text-embedding-3-small",
+    "embedding_dim": 1536,
+    "shape": [
+      8,
+      1536
+    ],
+    "prompt_embedding_sample": [
+      -0.010534914210438728,
+      -0.05013919994235039,
+      -0.020020708441734314,
+      -0.011627747677266598,
+      -0.031495459377765656,
+      -0.05289313942193985,
+      -0.04395376145839691,
+      0.031976308673620224,
+      0.029856210574507713,
+      -0.017889684066176414,
+      "...(1526 more)"
+    ],
+    "token_embeddings": {
+      "token_21119_Plan": [
+        -0.0012612029677256942,
+        0.030873650684952736,
+        0.0032364639919251204,
+        -0.03556817024946213,
+        0.0021721133962273598,
+        "...(1531 more)"
+      ],
+      "token_264_a": [
+        0.019869482144713402,
+        -0.007352013140916824,
+        -0.024379733949899673,
+        0.05485440045595169,
+        0.020204704254865646,
+        "...(1531 more)"
+      ],
+      "token_220_' '": [
+        -0.013823946006596088,
+        -0.0026845610700547695,
+        0.014369628392159939,
+        0.06012897193431854,
+        -0.03271494060754776,
+        "...(1531 more)"
+      ],
+      "token_18_3": [
+        0.016957776620984077,
+        -0.02317562885582447,
+        0.0680709183216095,
+        -0.03956814855337143,
+        0.008487452752888203,
+        "...(1531 more)"
+      ],
+      "token_11477_-day": [
+        0.003968355245888233,
+        0.003662817645817995,
+        0.04062199220061302,
+        0.020223699510097504,
+        0.0052305180579423904,
+        "...(1531 more)"
+      ],
+      "token_8577_trip": [
+        -0.016529250890016556,
+        -0.004119194112718105,
+        -0.03961772844195366,
+        -0.03229762986302376,
+        -0.03518369048833847,
+        "...(1531 more)"
+      ],
+      "token_311_to": [
+        0.03437265381217003,
+        -0.009454830549657345,
+        -0.0003405050956644118,
+        0.04468131810426712,
+        0.010347830131649971,
+        "...(1531 more)"
+      ],
+      "token_27286_Tokyo": [
+        -0.01103208214044571,
+        -0.04181159287691116,
+        -0.032787349075078964,
+        0.062044430524110794,
+        -0.009995066560804844,
+        "...(1531 more)"
+      ]
+    },
+    "explanation": "Each token ID is converted to a 1536-dimensional vector that captures semantic meaning",
+    "code": "embeddings = model.embed_tokens(token_ids)\n# Shape: [8 tokens, 1536 dimensions]\n# Each token becomes a dense vector representation"
+  },
+  "layer4_semanticSearch": {
+    "query_embedding": "embedding_of('Plan a 3-day trip to Tokyo')",
+    "search_method": "cosine_similarity",
+    "top_k": 5,
+    "total_docs_searched": 10,
+    "retrieved_docs": [
+      {
+        "id": "doc_05",
+        "category": "user_metadata",
+        "similarity": 0.4289,
+        "snippet": "Timezone: GMT+1, typically plans trips 2-3 months ahead"
+      },
+      {
+        "id": "doc_03",
+        "category": "travel_history",
+        "similarity": 0.4141,
+        "snippet": "Previous trip to Kyoto, enjoyed temples and tea ceremonies"
+      },
+      {
+        "id": "doc_02",
+        "category": "user_preferences",
+        "similarity": 0.3334,
+        "snippet": "Travel preferences: morning activities, cultural sites, local experiences"
+      },
+      {
+        "id": "doc_10",
+        "category": "user_interests",
+        "similarity": 0.2037,
+        "snippet": "Enjoys cooking, especially Japanese and Mediterranean cuisine"
+      },
+      {
+        "id": "doc_06",
+        "category": "user_interests",
+        "similarity": 0.1697,
+        "snippet": "Interested in technology, AI, and science topics"
+      }
+    ],
+    "all_similarities": [
+      {
+        "id": "doc_05",
+        "category": "user_metadata",
+        "similarity": 0.4289,
+        "snippet": "Timezone: GMT+1, typically plans trips 2-3 months ahead"
+      },
+      {
+        "id": "doc_03",
+        "category": "travel_history",
+        "similarity": 0.4141,
+        "snippet": "Previous trip to Kyoto, enjoyed temples and tea ceremonies"
+      },
+      {
+        "id": "doc_02",
+        "category": "user_preferences",
+        "similarity": 0.3334,
+        "snippet": "Travel preferences: morning activities, cultural sites, local experiences"
+      },
+      {
+        "id": "doc_10",
+        "category": "user_interests",
+        "similarity": 0.2037,
+        "snippet": "Enjoys cooking, especially Japanese and Mediterranean cuisine"
+      },
+      {
+        "id": "doc_06",
+        "category": "user_interests",
+        "similarity": 0.1697,
+        "snippet": "Interested in technology, AI, and science topics"
+      },
+      {
+        "id": "doc_01",
+        "category": "user_preferences",
+        "similarity": 0.1616,
+        "snippet": "User previously mentioned: likes museums and traditional food"
+      },
+      {
+        "id": "doc_04",
+        "category": "user_preferences",
+        "similarity": 0.1254,
+        "snippet": "Budget range: moderate, prefers quality over luxury"
+      },
+      {
+        "id": "doc_07",
+        "category": "communication_style",
+        "similarity": 0.0961,
+        "snippet": "Prefers structured, step-by-step explanations with examples"
+      },
+      {
+        "id": "doc_08",
+        "category": "user_background",
+        "similarity": 0.0833,
+        "snippet": "Has background in software engineering and data science"
+      },
+      {
+        "id": "doc_09",
+        "category": "query_history",
+        "similarity": 0.0415,
+        "snippet": "Previously asked about machine learning fundamentals and neural networks"
+      }
+    ],
+    "code": "from numpy import dot\nfrom numpy.linalg import norm\n\ndef cosine_similarity(a, b):\n    return dot(a, b) / (norm(a) * norm(b))\n\nquery_vec = embed(\"Plan a 3-day trip to Tokyo...\")\nresults = []\nfor doc in vector_db:\n    sim = cosine_similarity(query_vec, doc.embedding)\n    results.append((doc, sim))\n\ntop_5 = sorted(results, key=lambda x: x[1], reverse=True)[:5]"
+  },
+  "layer5_contextInjection": {
+    "retrieved_context": [
+      "Timezone: GMT+1, typically plans trips 2-3 months ahead",
+      "Previous trip to Kyoto, enjoyed temples and tea ceremonies",
+      "Travel preferences: morning activities, cultural sites, local experiences",
+      "Enjoys cooking, especially Japanese and Mediterranean cuisine",
+      "Interested in technology, AI, and science topics"
+    ],
+    "injected_into_prompt": true,
+    "source": "Model Context Protocol (MCP)",
+    "mcp_structure": {
+      "user_input": "Plan a 3-day trip to Tokyo",
+      "system_state": "conversation_turn_1",
+      "memory_objects": [
+        "user_interests",
+        "user_metadata",
+        "travel_history",
+        "user_preferences"
+      ],
+      "tool_use": null,
+      "context_graph": "user_metadata \u2192 travel_history \u2192 user_preferences \u2192 response_generation"
+    },
+    "code": "context = {\n    \"user_input\": user_message,\n    \"memory\": retrieve_from_vector_db(query_embedding),\n    \"system_state\": session.state,\n    \"timestamp\": session.timestamp\n}\nenriched_prompt = assemble_prompt(context)"
+  },
+  "layer6_taskDecomposition": {
+    "orchestrator": "LangChain",
+    "chain_type": "SequentialChain",
+    "steps": [
+      "understand_intent",
+      "gather_travel_requirements",
+      "research_attractions",
+      "create_itinerary",
+      "format_output"
+    ],
+    "code": "from langchain.chains import SequentialChain\n\ntasks = [\n    (\"understand_intent\", UnderstandIntentChain()),\n    (\"gather_travel_requirements\", GatherTravelRequirementsChain()),\n    (\"research_attractions\", ResearchAttractionsChain()),\n    (\"create_itinerary\", CreateItineraryChain()),\n    (\"format_output\", FormatOutputChain()),\n]\n\nchain = SequentialChain(chains=tasks)\nresult = chain.run(user_input=enriched_prompt)"
+  },
+  "layer7_attention": {
+    "mechanism": "Multi-Head Self-Attention",
+    "num_heads": 96,
+    "num_layers": 96,
+    "context_window": 128000,
+    "attention_pattern": "Each of 8 tokens attends to all previous tokens",
+    "tokens": [
+      "Plan",
+      " a",
+      " ",
+      "3",
+      "-day",
+      " trip",
+      " to",
+      " Tokyo"
+    ],
+    "attention_matrix_head_0": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.4175,
+        0.5825,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0437,
+        0.3266,
+        0.6297,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0604,
+        0.2799,
+        0.3873,
+        0.2725,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0733,
+        0.0515,
+        0.2621,
+        0.3768,
+        0.2363,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.085,
+        0.1656,
+        0.0835,
+        0.1003,
+        0.1664,
+        0.3991,
+        0.0,
+        0.0
+      ],
+      [
+        0.1353,
+        0.0762,
+        0.1221,
+        0.068,
+        0.1636,
+        0.1785,
+        0.2563,
+        0.0
+      ],
+      [
+        0.1578,
+        0.0653,
+        0.0103,
+        0.1368,
+        0.1001,
+        0.2044,
+        0.1623,
+        0.1628
+      ]
+    ],
+    "explanation": "The transformer calculates attention scores between tokens to understand relationships and dependencies. This is one of 96 attention heads in one of 96 layers.",
+    "code": "Q = embeddings @ W_query  # Query matrix\nK = embeddings @ W_key    # Key matrix\nV = embeddings @ W_value  # Value matrix\n\nattention_scores = (Q @ K.T) / sqrt(d_k)\nattention_weights = softmax(attention_scores)\noutput = attention_weights @ V\n\n# This happens 96 times (num_heads) per layer\n# Across 96 layers in GPT-4"
+  },
+  "layer8_prediction": {
+    "vocab_size": 100277,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "model": "gpt-4o",
+    "first_token_predictions": [
+      {
+        "position": 0,
+        "chosen_token": "Certainly",
+        "logprob": -1.2767,
+        "probability": 0.279,
+        "alternatives": [
+          {
+            "token": "Planning",
+            "logprob": -1.2767,
+            "probability": 0.279
+          },
+          {
+            "token": "Certainly",
+            "logprob": -1.2767,
+            "probability": 0.279
+          },
+          {
+            "token": "Sure",
+            "logprob": -2.0267,
+            "probability": 0.1318
+          },
+          {
+            "token": "That",
+            "logprob": -2.2767,
+            "probability": 0.1026
+          },
+          {
+            "token": "Here's",
+            "logprob": -2.5267,
+            "probability": 0.0799
+          }
+        ]
+      },
+      {
+        "position": 1,
+        "chosen_token": "!",
+        "logprob": -0.0009,
+        "probability": 0.9991,
+        "alternatives": [
+          {
+            "token": "!",
+            "logprob": -0.0009,
+            "probability": 0.9991
+          },
+          {
+            "token": ",",
+            "logprob": -7.0009,
+            "probability": 0.0009
+          },
+          {
+            "token": ".",
+            "logprob": -15.0009,
+            "probability": 0.0
+          },
+          {
+            "token": "\u2014",
+            "logprob": -17.7509,
+            "probability": 0.0
+          },
+          {
+            "token": "!\n\n",
+            "logprob": -19.4384,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 2,
+        "chosen_token": " Here",
+        "logprob": -1.508,
+        "probability": 0.2214,
+        "alternatives": [
+          {
+            "token": " Here's",
+            "logprob": -0.758,
+            "probability": 0.4686
+          },
+          {
+            "token": " Here",
+            "logprob": -1.508,
+            "probability": 0.2214
+          },
+          {
+            "token": " Given",
+            "logprob": -2.508,
+            "probability": 0.0814
+          },
+          {
+            "token": " Planning",
+            "logprob": -2.508,
+            "probability": 0.0814
+          },
+          {
+            "token": " Let's",
+            "logprob": -3.008,
+            "probability": 0.0494
+          }
+        ]
+      },
+      {
+        "position": 3,
+        "chosen_token": "\u2019s",
+        "logprob": -0.079,
+        "probability": 0.924,
+        "alternatives": [
+          {
+            "token": "\u2019s",
+            "logprob": -0.079,
+            "probability": 0.924
+          },
+          {
+            "token": " is",
+            "logprob": -2.579,
+            "probability": 0.0758
+          },
+          {
+            "token": " are",
+            "logprob": -9.329,
+            "probability": 0.0001
+          },
+          {
+            "token": " you",
+            "logprob": -11.579,
+            "probability": 0.0
+          },
+          {
+            "token": "'s",
+            "logprob": -13.204,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 4,
+        "chosen_token": " a",
+        "logprob": -0.0038,
+        "probability": 0.9962,
+        "alternatives": [
+          {
+            "token": " a",
+            "logprob": -0.0038,
+            "probability": 0.9962
+          },
+          {
+            "token": " an",
+            "logprob": -5.5663,
+            "probability": 0.0038
+          },
+          {
+            "token": " how",
+            "logprob": -11.3163,
+            "probability": 0.0
+          },
+          {
+            "token": " your",
+            "logprob": -12.7538,
+            "probability": 0.0
+          },
+          {
+            "token": " the",
+            "logprob": -15.0351,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 5,
+        "chosen_token": " suggested",
+        "logprob": -0.9605,
+        "probability": 0.3827,
+        "alternatives": [
+          {
+            "token": " ",
+            "logprob": -0.8355,
+            "probability": 0.4337
+          },
+          {
+            "token": " suggested",
+            "logprob": -0.9605,
+            "probability": 0.3827
+          },
+          {
+            "token": " tailored",
+            "logprob": -2.8355,
+            "probability": 0.0587
+          },
+          {
+            "token": " detailed",
+            "logprob": -3.4605,
+            "probability": 0.0314
+          },
+          {
+            "token": " proposed",
+            "logprob": -3.8355,
+            "probability": 0.0216
+          }
+        ]
+      },
+      {
+        "position": 6,
+        "chosen_token": " ",
+        "logprob": -0.2868,
+        "probability": 0.7507,
+        "alternatives": [
+          {
+            "token": " ",
+            "logprob": -0.2868,
+            "probability": 0.7507
+          },
+          {
+            "token": " itinerary",
+            "logprob": -1.4118,
+            "probability": 0.2437
+          },
+          {
+            "token": " three",
+            "logprob": -5.2868,
+            "probability": 0.0051
+          },
+          {
+            "token": " plan",
+            "logprob": -7.5368,
+            "probability": 0.0005
+          },
+          {
+            "token": " outline",
+            "logprob": -11.7868,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 7,
+        "chosen_token": "3",
+        "logprob": 0.0,
+        "probability": 1.0,
+        "alternatives": [
+          {
+            "token": "3",
+            "logprob": 0.0,
+            "probability": 1.0
+          },
+          {
+            "token": " three",
+            "logprob": -18.125,
+            "probability": 0.0
+          },
+          {
+            "token": " ",
+            "logprob": -20.1875,
+            "probability": 0.0
+          },
+          {
+            "token": " itinerary",
+            "logprob": -20.75,
+            "probability": 0.0
+          },
+          {
+            "token": "\uff13",
+            "logprob": -21.875,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 8,
+        "chosen_token": "-day",
+        "logprob": -0.0,
+        "probability": 1.0,
+        "alternatives": [
+          {
+            "token": "-day",
+            "logprob": -0.0,
+            "probability": 1.0
+          },
+          {
+            "token": "-Day",
+            "logprob": -17.0,
+            "probability": 0.0
+          },
+          {
+            "token": "\u2011",
+            "logprob": -17.5,
+            "probability": 0.0
+          },
+          {
+            "token": "\u2013",
+            "logprob": -17.875,
+            "probability": 0.0
+          },
+          {
+            "token": "\u2010",
+            "logprob": -19.25,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 9,
+        "chosen_token": " itinerary",
+        "logprob": -0.0026,
+        "probability": 0.9974,
+        "alternatives": [
+          {
+            "token": " itinerary",
+            "logprob": -0.0026,
+            "probability": 0.9974
+          },
+          {
+            "token": " trip",
+            "logprob": -6.3776,
+            "probability": 0.0017
+          },
+          {
+            "token": " Tokyo",
+            "logprob": -7.2526,
+            "probability": 0.0007
+          },
+          {
+            "token": " travel",
+            "logprob": -9.3776,
+            "probability": 0.0001
+          },
+          {
+            "token": " cultural",
+            "logprob": -9.6276,
+            "probability": 0.0001
+          }
+        ]
+      },
+      {
+        "position": 10,
+        "chosen_token": " for",
+        "logprob": -0.0195,
+        "probability": 0.9806,
+        "alternatives": [
+          {
+            "token": " for",
+            "logprob": -0.0195,
+            "probability": 0.9806
+          },
+          {
+            "token": " in",
+            "logprob": -4.3945,
+            "probability": 0.0123
+          },
+          {
+            "token": " to",
+            "logprob": -5.5195,
+            "probability": 0.004
+          },
+          {
+            "token": " tailored",
+            "logprob": -6.3945,
+            "probability": 0.0017
+          },
+          {
+            "token": " that",
+            "logprob": -7.2695,
+            "probability": 0.0007
+          }
+        ]
+      },
+      {
+        "position": 11,
+        "chosen_token": " Tokyo",
+        "logprob": -1.1063,
+        "probability": 0.3308,
+        "alternatives": [
+          {
+            "token": " a",
+            "logprob": -0.9813,
+            "probability": 0.3748
+          },
+          {
+            "token": " Tokyo",
+            "logprob": -1.1063,
+            "probability": 0.3308
+          },
+          {
+            "token": " your",
+            "logprob": -1.2313,
+            "probability": 0.2919
+          },
+          {
+            "token": " you",
+            "logprob": -6.6063,
+            "probability": 0.0014
+          },
+          {
+            "token": " exploring",
+            "logprob": -7.2313,
+            "probability": 0.0007
+          }
+        ]
+      },
+      {
+        "position": 12,
+        "chosen_token": " that",
+        "logprob": -0.3242,
+        "probability": 0.7231,
+        "alternatives": [
+          {
+            "token": " that",
+            "logprob": -0.3242,
+            "probability": 0.7231
+          },
+          {
+            "token": ",",
+            "logprob": -1.3242,
+            "probability": 0.266
+          },
+          {
+            "token": " tailored",
+            "logprob": -5.3242,
+            "probability": 0.0049
+          },
+          {
+            "token": " with",
+            "logprob": -6.1992,
+            "probability": 0.002
+          },
+          {
+            "token": " focusing",
+            "logprob": -6.8242,
+            "probability": 0.0011
+          }
+        ]
+      },
+      {
+        "position": 13,
+        "chosen_token": " aligns",
+        "logprob": -0.3309,
+        "probability": 0.7183,
+        "alternatives": [
+          {
+            "token": " aligns",
+            "logprob": -0.3309,
+            "probability": 0.7183
+          },
+          {
+            "token": " incorporates",
+            "logprob": -2.7059,
+            "probability": 0.0668
+          },
+          {
+            "token": " caters",
+            "logprob": -2.8309,
+            "probability": 0.059
+          },
+          {
+            "token": " focuses",
+            "logprob": -3.2059,
+            "probability": 0.0405
+          },
+          {
+            "token": " includes",
+            "logprob": -3.4559,
+            "probability": 0.0316
+          }
+        ]
+      },
+      {
+        "position": 14,
+        "chosen_token": " with",
+        "logprob": -0.0047,
+        "probability": 0.9953,
+        "alternatives": [
+          {
+            "token": " with",
+            "logprob": -0.0047,
+            "probability": 0.9953
+          },
+          {
+            "token": " well",
+            "logprob": -5.3797,
+            "probability": 0.0046
+          },
+          {
+            "token": " nicely",
+            "logprob": -10.1297,
+            "probability": 0.0
+          },
+          {
+            "token": " perfectly",
+            "logprob": -10.8797,
+            "probability": 0.0
+          },
+          {
+            "token": " beautifully",
+            "logprob": -13.2547,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 15,
+        "chosen_token": " your",
+        "logprob": -0.0,
+        "probability": 1.0,
+        "alternatives": [
+          {
+            "token": " your",
+            "logprob": -0.0,
+            "probability": 1.0
+          },
+          {
+            "token": " what",
+            "logprob": -12.5625,
+            "probability": 0.0
+          },
+          {
+            "token": " the",
+            "logprob": -12.75,
+            "probability": 0.0
+          },
+          {
+            "token": " both",
+            "logprob": -13.0625,
+            "probability": 0.0
+          },
+          {
+            "token": " some",
+            "logprob": -14.125,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 16,
+        "chosen_token": " interests",
+        "logprob": -0.2034,
+        "probability": 0.8159,
+        "alternatives": [
+          {
+            "token": " interests",
+            "logprob": -0.2034,
+            "probability": 0.8159
+          },
+          {
+            "token": " preferences",
+            "logprob": -1.8284,
+            "probability": 0.1607
+          },
+          {
+            "token": " travel",
+            "logprob": -3.9534,
+            "probability": 0.0192
+          },
+          {
+            "token": " cultural",
+            "logprob": -6.0784,
+            "probability": 0.0023
+          },
+          {
+            "token": " interest",
+            "logprob": -6.4534,
+            "probability": 0.0016
+          }
+        ]
+      },
+      {
+        "position": 17,
+        "chosen_token": ":\n\n",
+        "logprob": -1.4939,
+        "probability": 0.2245,
+        "alternatives": [
+          {
+            "token": " in",
+            "logprob": -0.9939,
+            "probability": 0.3701
+          },
+          {
+            "token": " and",
+            "logprob": -0.9939,
+            "probability": 0.3701
+          },
+          {
+            "token": ":\n\n",
+            "logprob": -1.4939,
+            "probability": 0.2245
+          },
+          {
+            "token": ".",
+            "logprob": -4.1189,
+            "probability": 0.0163
+          },
+          {
+            "token": ",",
+            "logprob": -4.2439,
+            "probability": 0.0144
+          }
+        ]
+      },
+      {
+        "position": 18,
+        "chosen_token": "**",
+        "logprob": -0.3994,
+        "probability": 0.6708,
+        "alternatives": [
+          {
+            "token": "**",
+            "logprob": -0.3994,
+            "probability": 0.6708
+          },
+          {
+            "token": "###",
+            "logprob": -1.1494,
+            "probability": 0.3168
+          },
+          {
+            "token": "---\n\n",
+            "logprob": -4.3994,
+            "probability": 0.0123
+          },
+          {
+            "token": "---\n",
+            "logprob": -10.1494,
+            "probability": 0.0
+          },
+          {
+            "token": "##",
+            "logprob": -10.3994,
+            "probability": 0.0
+          }
+        ]
+      },
+      {
+        "position": 19,
+        "chosen_token": "Day",
+        "logprob": -0.0,
+        "probability": 1.0,
+        "alternatives": [
+          {
+            "token": "Day",
+            "logprob": -0.0,
+            "probability": 1.0
+          },
+          {
+            "token": "Before",
+            "logprob": -13.125,
+            "probability": 0.0
+          },
+          {
+            "token": "DAY",
+            "logprob": -13.375,
+            "probability": 0.0
+          },
+          {
+            "token": "---",
+            "logprob": -13.75,
+            "probability": 0.0
+          },
+          {
+            "token": "Trip",
+            "logprob": -13.875,
+            "probability": 0.0
+          }
+        ]
+      }
+    ],
+    "code": "logits = transformer_output  # [vocab_size] probabilities\nprobs = softmax(logits / temperature)\n\n# Top-p (nucleus) sampling\nsorted_probs = sort(probs, descending=True)\ncumsum = cumulative_sum(sorted_probs)\ntop_p_mask = cumsum <= 0.9\n\n# Sample from top-p tokens\nnext_token = sample(probs[top_p_mask])"
+  },
+  "layer9_detokenization": {
+    "token_ids": [
+      96556,
+      0,
+      5810,
+      753,
+      264,
+      12090,
+      220,
+      18,
+      11477,
+      74004,
+      369,
+      27286,
+      430,
+      5398,
+      82,
+      449,
+      701,
+      12034,
+      1473,
+      334,
+      10369,
+      220,
+      16,
+      25,
+      41333,
+      76022,
+      323,
+      8949,
+      1398,
+      69597
+    ],
+    "total_response_tokens": 517,
+    "decoded_text": "certainly! here\u2019s a suggested 3 day itinerary for tokyo that aligns with your interests: day 1: cultural exploration and local experiences morning: start your day with a visit to the senso ji temple in asakusa, tokyo's oldest temple. arrive early to enjoy the peaceful atmosphere before it gets crowd...",
+    "decoding_method": "tiktoken (cl100k_base)",
+    "code": "import tiktoken\n\ndecoder = tiktoken.get_encoding(\"cl100k_base\")\ntoken_ids = [96556, 0, 5810, 753, 264, 12090, 220, 18]...\ntext = decoder.decode(token_ids)\n# Output: \"certainly! here\u2019s a suggested 3 day itinerary for tokyo that...\""
+  },
+  "layer10_postProcessing": {
+    "raw_output": "certainly! here\u2019s a suggested 3 day itinerary for tokyo that aligns with your interests: day 1: cultural exploration and local experiences morning: start your day with a visit to the senso ji temple in asakusa, tokyo's oldest temple. arrive early to enjoy the peaceful atmosphere before it gets crowded. late morning: explore the nearby nakamise shopping street . here, you can try traditional snacks and pick up some unique souvenirs. lunch: head to a local restaurant in asakusa to try some tempura...",
+    "formatted_output": "Certainly! Here\u2019s a suggested 3-day itinerary for Tokyo that aligns with your interests:\n\n**Day 1: Cultural Exploration and Local Experiences**\n- **Morning:** Start your day with a visit to the **Senso-ji Temple** in Asakusa, Tokyo's oldest temple. Arrive early to enjoy the peaceful atmosphere before it gets crowded.\n- **Late Morning:** Explore the nearby **Nakamise Shopping Street**. Here, you can try traditional snacks and pick up some unique souvenirs.\n- **Lunch:** Head to a local restaurant in Asakusa to try some tempura, a popular Japanese dish.\n- **Afternoon:** Visit the **Edo-Tokyo Museum** to learn about Tokyo's history and culture. It offers a fascinating glimpse into the city's transformation over the centuries.\n- **Evening:** Enjoy a traditional **tea ceremony** at a tea house in the city. This aligns with your previous interest in Kyoto and provides a serene cultural experience.\n\n**Day 2: Modern Tokyo and Technology**\n- **Morning:** Begin your day in **Odaiba**, a futuristic man-made island. Visit the **teamLab Borderless** or **teamLab Planets** digital art museum for an immersive experience that blends art and technology.\n- **Lunch:** Try a sushi restaurant in Odaiba for a fresh and delicious meal.\n- **Afternoon:** Explore the **Miraikan (National Museum of Emerging Science and Innovation)**. It's a great place to dive into topics like AI and robotics.\n- **Evening:** Head to **Akihabara**, the heart of tech and otaku culture. Explore the various electronics stores and themed cafes.\n\n**Day 3: Culinary Experiences and Relaxation**\n- **Morning:** Visit the **Tsukiji Outer Market** to explore stalls selling fresh seafood and other food items. Participate in a cooking class focused on making sushi or other Japanese dishes.\n- **Lunch:** Enjoy the fruits of your labor by eating the meal you prepared in the cooking class.\n- **Afternoon:** Spend some relaxing time at **Hamarikyu Gardens**, a beautiful traditional garden with a teahouse where you can enjoy matcha and sweets.\n- **Evening:** For your final night, have dinner at a **kaiseki restaurant**, which offers a multi-course Japanese meal that showcases seasonal ingredients.\n\nThis itinerary balances your interests in culture, technology, and culinary experiences while allowing you to enjoy the unique aspects of Tokyo. Enjoy your trip!",
+    "formatting_rules": [
+      "Capitalize proper nouns and sentence starts",
+      "Add markdown formatting (bold, headers)",
+      "Structure with bullet points or numbered lists",
+      "Add descriptive section headers",
+      "Ensure consistent tense and tone"
+    ],
+    "code": "def format_response(raw_text):\n    formatted = capitalize_sentences(raw_text)\n    formatted = add_markdown_headers(formatted)\n    formatted = create_bullet_points(formatted)\n    formatted = fix_spacing(formatted)\n    formatted = ensure_consistency(formatted)\n    return formatted"
+  },
+  "finalResponse": "Certainly! Here\u2019s a suggested 3-day itinerary for Tokyo that aligns with your interests:\n\n**Day 1: Cultural Exploration and Local Experiences**\n- **Morning:** Start your day with a visit to the **Senso-ji Temple** in Asakusa, Tokyo's oldest temple. Arrive early to enjoy the peaceful atmosphere before it gets crowded.\n- **Late Morning:** Explore the nearby **Nakamise Shopping Street**. Here, you can try traditional snacks and pick up some unique souvenirs.\n- **Lunch:** Head to a local restaurant in Asakusa to try some tempura, a popular Japanese dish.\n- **Afternoon:** Visit the **Edo-Tokyo Museum** to learn about Tokyo's history and culture. It offers a fascinating glimpse into the city's transformation over the centuries.\n- **Evening:** Enjoy a traditional **tea ceremony** at a tea house in the city. This aligns with your previous interest in Kyoto and provides a serene cultural experience.\n\n**Day 2: Modern Tokyo and Technology**\n- **Morning:** Begin your day in **Odaiba**, a futuristic man-made island. Visit the **teamLab Borderless** or **teamLab Planets** digital art museum for an immersive experience that blends art and technology.\n- **Lunch:** Try a sushi restaurant in Odaiba for a fresh and delicious meal.\n- **Afternoon:** Explore the **Miraikan (National Museum of Emerging Science and Innovation)**. It's a great place to dive into topics like AI and robotics.\n- **Evening:** Head to **Akihabara**, the heart of tech and otaku culture. Explore the various electronics stores and themed cafes.\n\n**Day 3: Culinary Experiences and Relaxation**\n- **Morning:** Visit the **Tsukiji Outer Market** to explore stalls selling fresh seafood and other food items. Participate in a cooking class focused on making sushi or other Japanese dishes.\n- **Lunch:** Enjoy the fruits of your labor by eating the meal you prepared in the cooking class.\n- **Afternoon:** Spend some relaxing time at **Hamarikyu Gardens**, a beautiful traditional garden with a teahouse where you can enjoy matcha and sweets.\n- **Evening:** For your final night, have dinner at a **kaiseki restaurant**, which offers a multi-course Japanese meal that showcases seasonal ingredients.\n\nThis itinerary balances your interests in culture, technology, and culinary experiences while allowing you to enjoy the unique aspects of Tokyo. Enjoy your trip!"
+}
