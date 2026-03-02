@@ -252,8 +252,8 @@
 
     <p>
       Every interaction with an LLM begins here. The user types a message
-      &mdash; a string of characters, nothing more. At this stage, the system
-      has <strong>no understanding</strong> of what the words mean.
+      &mdash; a string of characters. At this stage, the system
+      has not yet processed the content of the words.
     </p>
     <p>
       The raw input layer captures the text exactly as entered and wraps it
@@ -291,9 +291,9 @@
       a vocabulary of 100,277 entries.
     </p>
     <p>
-      This is a <strong>deterministic, reversible</strong> transformation.
-      No meaning is extracted yet &mdash; just a mechanical conversion from
-      text to a sequence of integers that the model&rsquo;s math can operate on.
+      This is a <strong>deterministic, reversible</strong> transformation
+      &mdash; converting text into a sequence of integers that the model&rsquo;s
+      mathematical operations can work with.
     </p>
     <p>Watch the text get sliced into tokens:</p>
 
@@ -322,10 +322,10 @@
       geometry</strong>: words with similar meanings end up near each other.
     </p>
     <p>
-      The model doesn&rsquo;t &ldquo;know&rdquo; what &ldquo;Tokyo&rdquo; means.
-      It only knows that the vector for &ldquo;Tokyo&rdquo; is close to
-      &ldquo;trip&rdquo; and far from &ldquo;3&rdquo;. Meaning is
-      <strong>distance</strong>.
+      The model represents meaning geometrically: the vector for
+      &ldquo;acquisition&rdquo; is close to &ldquo;investment&rdquo; and far
+      from &ldquo;Draft&rdquo;. In this space, <strong>meaning is
+      distance</strong>.
     </p>
     <p>Watch integers become geometry:</p>
 
@@ -353,10 +353,10 @@
       &mdash; a measure of how closely two vectors point in the same direction.
     </p>
     <p>
-      The result is a ranked list of the most relevant context. &ldquo;Relevance&rdquo;
-      is not understanding &mdash; it&rsquo;s just a <strong>number between 0 and 1</strong>.
-      A high similarity score means the document&rsquo;s vector is geometrically
-      close to the query vector. Nothing more.
+      The result is a ranked list of the most relevant context. Relevance
+      is expressed as a <strong>number between 0 and 1</strong> &mdash;
+      a high similarity score means the document&rsquo;s vector is geometrically
+      close to the query vector.
     </p>
     <p>Watch the search unfold:</p>
 
@@ -415,10 +415,9 @@
       that execute one after another.
     </p>
     <p>
-      This is engineering, not intelligence. A <strong>SequentialChain</strong>
-      defines which steps run in which order. Each step receives the output
-      of the previous one. The model is just one component in a larger
-      pipeline.
+      A <strong>SequentialChain</strong> defines which steps run in which
+      order. Each step receives the output of the previous one. The model
+      operates as one component in a larger orchestration pipeline.
     </p>
     <p>Watch the chain execute:</p>
 
@@ -505,16 +504,16 @@
     <div class="subtitle">Decode</div>
 
     <p>
-      The transformer has produced a sequence of <strong>517 token IDs</strong>.
+      The transformer has produced a sequence of <strong>523 token IDs</strong>.
       These are just integers &mdash; meaningless to a human. The tokenizer
       now runs in <strong>reverse</strong>, mapping each integer back to its
       corresponding text fragment.
     </p>
     <p>
       The result is raw, unformatted text: no capitalization, no structure,
-      no markdown. Just a continuous stream of characters. This is the
-      <strong>inverse</strong> of Layer 2 &mdash; a mechanical, deterministic
-      conversion from numbers back to text.
+      no markdown &mdash; a continuous stream of characters. This is the
+      <strong>inverse</strong> of Layer 2: a deterministic conversion from
+      numbers back to text.
     </p>
     <p>Watch the decode:</p>
 
@@ -543,8 +542,8 @@
     <p>
       A <strong>formatting pipeline</strong> now applies a sequence of rules
       &mdash; capitalizing proper nouns, adding markdown headers and bold text,
-      inserting bullet points, and ensuring consistent tone. This is pure
-      <strong>string manipulation</strong>, not intelligence.
+      inserting bullet points, and ensuring consistent tone &mdash; transforming
+      the raw stream into structured, readable output.
     </p>
     <p>Watch the text get polished:</p>
 
@@ -575,46 +574,44 @@
 // DATA
 // ============================================================
 const LAYER1_DATA = {
-  user_message: "Plan a 3-day trip to Tokyo",
-  timestamp: "2026-02-25T20:15:21.060881+00:00",
+  user_message: "Draft an investment thesis for this acquisition",
+  timestamp: "2026-02-25T20:21:08.921215+00:00",
   session_id: null,
 };
 
 const LAYER2_DATA = {
-  input_text: "Plan a 3-day trip to Tokyo",
-  tokens:    ["Plan", " a", " ", "3", "-day", " trip", " to", " Tokyo"],
-  token_ids: [21119, 264, 220, 18, 11477, 8577, 311, 27286],
-  num_tokens: 8,
+  input_text: "Draft an investment thesis for this acquisition",
+  tokens:    ["Draft", " an", " investment", " thesis", " for", " this", " acquisition"],
+  token_ids: [51186, 459, 9341, 17850, 369, 420, 24279],
+  num_tokens: 7,
   encoding_method: "tiktoken (cl100k_base)",
   vocab_size: 100277,
 };
 
 const LAYER3_DATA = {
-  tokens:    ["Plan", " a", " ", "3", "-day", " trip", " to", " Tokyo"],
-  token_ids: [21119, 264, 220, 18, 11477, 8577, 311, 27286],
+  tokens:    ["Draft", " an", " investment", " thesis", " for", " this", " acquisition"],
+  token_ids: [51186, 459, 9341, 17850, 369, 420, 24279],
   embedding_dim: 1536,
-  shape: [8, 1536],
-  // Real first-5 values from OpenAI embeddings API
+  shape: [7, 1536],
+  // Simulated first-5 embedding dimensions
   token_vectors: [
-    [-0.001, 0.031, 0.003, -0.036, 0.002],   // Plan
-    [0.020, -0.007, -0.024, 0.055, 0.020],    // a
-    [-0.014, -0.003, 0.014, 0.060, -0.033],   // (space)
-    [0.017, -0.023, 0.068, -0.040, 0.008],    // 3
-    [0.004, 0.004, 0.041, 0.020, 0.005],      // -day
-    [-0.017, -0.004, -0.040, -0.032, -0.035], // trip
-    [0.034, -0.009, -0.000, 0.045, 0.010],    // to
-    [-0.011, -0.042, -0.033, 0.062, -0.010],  // Tokyo
+    [-0.018, 0.027, 0.011, -0.042, 0.008],    // Draft
+    [0.022, -0.009, -0.019, 0.051, 0.017],     // an
+    [0.035, -0.031, 0.006, 0.087, 0.044],      // investment
+    [0.014, 0.019, -0.025, 0.063, -0.012],     // thesis
+    [0.029, -0.005, 0.003, 0.038, 0.021],      // for
+    [-0.008, 0.012, 0.016, 0.045, -0.028],     // this
+    [0.041, -0.038, -0.009, 0.092, 0.053],     // acquisition
   ],
-  // Pre-computed 2D projection (derived from dims 0,3 for better spread)
+  // Pre-computed 2D projection (dims 0,3 for spread)
   projection_2d: [
-    { x: -0.001, y: -0.036 },  // Plan
-    { x: 0.020,  y: 0.055 },   // a
-    { x: -0.014, y: 0.060 },   // (space)
-    { x: 0.017,  y: -0.040 },  // 3
-    { x: 0.004,  y: 0.020 },   // -day
-    { x: -0.017, y: -0.032 },  // trip
-    { x: 0.034,  y: 0.045 },   // to
-    { x: -0.011, y: 0.062 },   // Tokyo
+    { x: -0.018, y: -0.042 },  // Draft
+    { x: 0.022,  y: 0.051 },   // an
+    { x: 0.035,  y: 0.087 },   // investment
+    { x: 0.014,  y: 0.063 },   // thesis
+    { x: 0.029,  y: 0.038 },   // for
+    { x: -0.008, y: 0.045 },   // this
+    { x: 0.041,  y: 0.092 },   // acquisition
   ],
 };
 
@@ -623,42 +620,42 @@ const LAYER4_DATA = {
   top_k: 5,
   total_docs: 10,
   all_docs: [
-    { id: "doc_05", category: "user_metadata",       similarity: 0.4289, snippet: "Timezone: GMT+1, typically plans trips 2-3 months ahead", retrieved: true },
-    { id: "doc_03", category: "travel_history",       similarity: 0.4141, snippet: "Previous trip to Kyoto, enjoyed temples and tea ceremonies", retrieved: true },
-    { id: "doc_02", category: "user_preferences",     similarity: 0.3334, snippet: "Travel preferences: morning activities, cultural sites, local experiences", retrieved: true },
-    { id: "doc_10", category: "user_interests",       similarity: 0.2037, snippet: "Enjoys cooking, especially Japanese and Mediterranean cuisine", retrieved: true },
-    { id: "doc_06", category: "user_interests",       similarity: 0.1697, snippet: "Interested in technology, AI, and science topics", retrieved: true },
-    { id: "doc_01", category: "user_preferences",     similarity: 0.1616, snippet: "User previously mentioned: likes museums and traditional food", retrieved: false },
-    { id: "doc_04", category: "user_preferences",     similarity: 0.1254, snippet: "Budget range: moderate, prefers quality over luxury", retrieved: false },
-    { id: "doc_07", category: "communication_style",  similarity: 0.0961, snippet: "Prefers structured, step-by-step explanations with examples", retrieved: false },
-    { id: "doc_08", category: "user_background",      similarity: 0.0833, snippet: "Has background in software engineering and data science", retrieved: false },
-    { id: "doc_09", category: "query_history",        similarity: 0.0415, snippet: "Previously asked about machine learning fundamentals", retrieved: false },
+    { id: "doc_01", category: "deal_history",     similarity: 0.4712, snippet: "Previous LBO of mid-market software company at 8x EBITDA", retrieved: true },
+    { id: "doc_02", category: "target_financials", similarity: 0.4389, snippet: "Target EBITDA: $42M, revenue growth 18% CAGR, 34% gross margins", retrieved: true },
+    { id: "doc_03", category: "fund_strategy",    similarity: 0.3945, snippet: "Fund focuses on growth equity in B2B SaaS, $50-200M EV", retrieved: true },
+    { id: "doc_04", category: "due_diligence",    similarity: 0.3421, snippet: "Commercial DD complete: strong market position, 95% retention", retrieved: true },
+    { id: "doc_05", category: "market_research",  similarity: 0.2953, snippet: "PE deal volume down 15% YoY, dry powder at record $2.59T", retrieved: true },
+    { id: "doc_06", category: "portfolio_data",   similarity: 0.2187, snippet: "Current portfolio: 12 companies across tech and healthcare", retrieved: false },
+    { id: "doc_07", category: "investor_profile", similarity: 0.1834, snippet: "LP base: pension funds, endowments, family offices", retrieved: false },
+    { id: "doc_08", category: "performance",      similarity: 0.1456, snippet: "Fund III net IRR: 22.4%, MOIC: 2.3x, DPI: 1.4x", retrieved: false },
+    { id: "doc_09", category: "regulatory",       similarity: 0.0923, snippet: "SEC registered investment adviser, Form ADV filed", retrieved: false },
+    { id: "doc_10", category: "compliance",       similarity: 0.0547, snippet: "Annual compliance review completed, no material findings", retrieved: false },
   ],
 };
 
 const LAYER5_DATA = {
-  user_input: "Plan a 3-day trip to Tokyo",
+  user_input: "Draft an investment thesis for this acquisition",
   system_state: "conversation_turn_1",
   retrieved_context: [
-    { text: "Timezone: GMT+1, typically plans trips 2-3 months ahead", source: "user_metadata" },
-    { text: "Previous trip to Kyoto, enjoyed temples and tea ceremonies", source: "travel_history" },
-    { text: "Travel preferences: morning activities, cultural sites, local experiences", source: "user_preferences" },
-    { text: "Enjoys cooking, especially Japanese and Mediterranean cuisine", source: "user_interests" },
-    { text: "Interested in technology, AI, and science topics", source: "user_interests" },
+    { text: "Previous LBO of mid-market software company at 8x EBITDA", source: "deal_history" },
+    { text: "Target EBITDA: $42M, revenue growth 18% CAGR, 34% margins", source: "target_financials" },
+    { text: "Fund focuses on growth equity in B2B SaaS, $50-200M EV", source: "fund_strategy" },
+    { text: "Commercial DD complete: strong market position, 95% retention", source: "due_diligence" },
+    { text: "PE deal volume down 15% YoY, dry powder at record $2.59T", source: "market_research" },
   ],
-  memory_objects: ["user_interests", "user_metadata", "travel_history", "user_preferences"],
-  context_graph: ["user_metadata", "travel_history", "user_preferences", "response_generation"],
+  memory_objects: ["deal_history", "target_financials", "fund_strategy", "due_diligence"],
+  context_graph: ["deal_history", "target_financials", "fund_strategy", "response_generation"],
 };
 
 const LAYER6_DATA = {
   orchestrator: "LangChain",
   chain_type: "SequentialChain",
   steps: [
-    { name: "understand_intent", label: "Understand Intent", desc: "Parse the user's goal and constraints", icon: "\u{1F50D}" },
-    { name: "gather_travel_requirements", label: "Gather Requirements", desc: "Extract dates, destination, preferences", icon: "\u{1F4CB}" },
-    { name: "research_attractions", label: "Research Attractions", desc: "Query knowledge base for Tokyo activities", icon: "\u{1F3EF}" },
-    { name: "create_itinerary", label: "Create Itinerary", desc: "Build day-by-day schedule", icon: "\u{1F5D3}" },
-    { name: "format_output", label: "Format Output", desc: "Structure response with headers and bullets", icon: "\u{2728}" },
+    { name: "understand_intent", label: "Understand Intent", desc: "Parse the user's request for an investment thesis", icon: "\u{1F50D}" },
+    { name: "analyze_target", label: "Analyze Target", desc: "Review financials, market position, and DD findings", icon: "\u{1F4CA}" },
+    { name: "build_thesis", label: "Build Thesis", desc: "Synthesize rationale, risks, and value creation plan", icon: "\u{1F4DD}" },
+    { name: "structure_memo", label: "Structure Memo", desc: "Format as investment committee memo", icon: "\u{1F4CB}" },
+    { name: "format_output", label: "Format Output", desc: "Add headers, bullet points, and key metrics", icon: "\u{2728}" },
   ],
 };
 
@@ -667,16 +664,15 @@ const LAYER7_DATA = {
   num_heads: 96,
   num_layers: 96,
   context_window: 128000,
-  tokens: ["Plan", " a", " ", "3", "-day", " trip", " to", " Tokyo"],
+  tokens: ["Draft", " an", " investment", " thesis", " for", " this", " acquisition"],
   attention_matrix: [
-    [1.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0   ],
-    [0.4175, 0.5825, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0   ],
-    [0.0437, 0.3266, 0.6297, 0.0,    0.0,    0.0,    0.0,    0.0   ],
-    [0.0604, 0.2799, 0.3873, 0.2725, 0.0,    0.0,    0.0,    0.0   ],
-    [0.0733, 0.0515, 0.2621, 0.3768, 0.2363, 0.0,    0.0,    0.0   ],
-    [0.085,  0.1656, 0.0835, 0.1003, 0.1664, 0.3991, 0.0,    0.0   ],
-    [0.1353, 0.0762, 0.1221, 0.068,  0.1636, 0.1785, 0.2563, 0.0   ],
-    [0.1578, 0.0653, 0.0103, 0.1368, 0.1001, 0.2044, 0.1623, 0.1628],
+    [1.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0   ],
+    [0.3842, 0.6158, 0.0,    0.0,    0.0,    0.0,    0.0   ],
+    [0.0915, 0.1823, 0.7262, 0.0,    0.0,    0.0,    0.0   ],
+    [0.0673, 0.1041, 0.4521, 0.3765, 0.0,    0.0,    0.0   ],
+    [0.0824, 0.0612, 0.2187, 0.3415, 0.2962, 0.0,    0.0   ],
+    [0.1156, 0.0734, 0.1892, 0.1245, 0.1687, 0.3286, 0.0   ],
+    [0.1423, 0.0587, 0.2834, 0.1156, 0.0912, 0.1534, 0.1554],
   ],
 };
 
@@ -685,69 +681,71 @@ const LAYER8_DATA = {
   temperature: 0.7,
   top_p: 0.9,
   model: "gpt-4o",
-  // Curated selection of interesting positions from the real logprobs
+  // Simulated logprobs for an investment thesis response
   predictions: [
-    { pos: 0, chosen: "Certainly", prob: 0.279, alts: [
-      { token: "Planning", prob: 0.279 }, { token: "Certainly", prob: 0.279 },
-      { token: "Sure", prob: 0.132 }, { token: "That", prob: 0.103 }, { token: "Here's", prob: 0.080 }
+    { pos: 0, chosen: "##", prob: 0.412, alts: [
+      { token: "##", prob: 0.412 }, { token: "**", prob: 0.318 },
+      { token: "Investment", prob: 0.142 }, { token: "Here", prob: 0.078 }, { token: "Below", prob: 0.031 }
     ]},
-    { pos: 1, chosen: "!", prob: 0.999, alts: [
-      { token: "!", prob: 0.999 }, { token: ",", prob: 0.001 },
-      { token: ".", prob: 0.000 }, { token: "\u2014", prob: 0.000 }
+    { pos: 1, chosen: " Investment", prob: 0.891, alts: [
+      { token: " Investment", prob: 0.891 }, { token: " Acquisition", prob: 0.067 },
+      { token: " Draft", prob: 0.023 }, { token: " Thesis", prob: 0.012 }
     ]},
-    { pos: 2, chosen: " Here", prob: 0.221, alts: [
-      { token: " Here's", prob: 0.469 }, { token: " Here", prob: 0.221 },
-      { token: " Given", prob: 0.081 }, { token: " Planning", prob: 0.081 }, { token: " Let's", prob: 0.049 }
+    { pos: 2, chosen: " Thesis", prob: 0.724, alts: [
+      { token: " Thesis", prob: 0.724 }, { token: " Memo", prob: 0.189 },
+      { token: " Case", prob: 0.054 }, { token: " Rationale", prob: 0.021 }
     ]},
-    { pos: 3, chosen: "\u2019s", prob: 0.924, alts: [
-      { token: "\u2019s", prob: 0.924 }, { token: " is", prob: 0.076 },
-      { token: " are", prob: 0.000 }
+    { pos: 4, chosen: " Target", prob: 0.563, alts: [
+      { token: " Target", prob: 0.563 }, { token: " Company", prob: 0.287 },
+      { token: " Subject", prob: 0.089 }, { token: " Deal", prob: 0.042 }
     ]},
-    { pos: 4, chosen: " a", prob: 0.996, alts: [
-      { token: " a", prob: 0.996 }, { token: " an", prob: 0.004 }
+    { pos: 6, chosen: " B", prob: 0.634, alts: [
+      { token: " B", prob: 0.634 }, { token: " SaaS", prob: 0.198 },
+      { token: " Technology", prob: 0.112 }, { token: " Software", prob: 0.034 }
     ]},
-    { pos: 5, chosen: " suggested", prob: 0.383, alts: [
-      { token: " ", prob: 0.434 }, { token: " suggested", prob: 0.383 },
-      { token: " tailored", prob: 0.059 }, { token: " detailed", prob: 0.031 }, { token: " proposed", prob: 0.022 }
+    { pos: 10, chosen: " platform", prob: 0.447, alts: [
+      { token: " platform", prob: 0.447 }, { token: " company", prob: 0.312 },
+      { token: " business", prob: 0.156 }, { token: " provider", prob: 0.061 }
     ]},
-    { pos: 7, chosen: "3", prob: 1.0, alts: [
-      { token: "3", prob: 1.0 }, { token: " three", prob: 0.000 }
+    { pos: 15, chosen: " compelling", prob: 0.382, alts: [
+      { token: " compelling", prob: 0.382 }, { token: " attractive", prob: 0.341 },
+      { token: " strong", prob: 0.178 }, { token: " differentiated", prob: 0.067 }
     ]},
-    { pos: 8, chosen: "-day", prob: 1.0, alts: [
-      { token: "-day", prob: 1.0 }, { token: "-Day", prob: 0.000 }
+    { pos: 18, chosen: " EBITDA", prob: 0.567, alts: [
+      { token: " EBITDA", prob: 0.567 }, { token: " revenue", prob: 0.234 },
+      { token: " margin", prob: 0.123 }, { token: " earnings", prob: 0.048 }
     ]},
-    { pos: 9, chosen: " itinerary", prob: 0.997, alts: [
-      { token: " itinerary", prob: 0.997 }, { token: " trip", prob: 0.002 },
-      { token: " Tokyo", prob: 0.001 }
+    { pos: 22, chosen: " 8", prob: 0.289, alts: [
+      { token: " 8", prob: 0.289 }, { token: " 7", prob: 0.245 },
+      { token: " 9", prob: 0.198 }, { token: " 10", prob: 0.156 }, { token: " 6", prob: 0.078 }
     ]},
-    { pos: 11, chosen: " Tokyo", prob: 0.331, alts: [
-      { token: " a", prob: 0.375 }, { token: " Tokyo", prob: 0.331 },
-      { token: " your", prob: 0.292 }, { token: " you", prob: 0.001 }
+    { pos: 25, chosen: " multiple", prob: 0.823, alts: [
+      { token: " multiple", prob: 0.823 }, { token: " EV", prob: 0.098 },
+      { token: " valuation", prob: 0.052 }
     ]},
-    { pos: 16, chosen: " interests", prob: 0.816, alts: [
-      { token: " interests", prob: 0.816 }, { token: " preferences", prob: 0.161 },
-      { token: " travel", prob: 0.019 }
+    { pos: 30, chosen: " operational", prob: 0.456, alts: [
+      { token: " operational", prob: 0.456 }, { token: " margin", prob: 0.267 },
+      { token: " revenue", prob: 0.178 }, { token: " cost", prob: 0.067 }
     ]},
-    { pos: 19, chosen: "Day", prob: 1.0, alts: [
-      { token: "Day", prob: 1.0 }, { token: "Before", prob: 0.000 },
-      { token: "DAY", prob: 0.000 }, { token: "Trip", prob: 0.000 }
+    { pos: 35, chosen: " 3", prob: 0.512, alts: [
+      { token: " 3", prob: 0.512 }, { token: " 2", prob: 0.234 },
+      { token: " 5", prob: 0.156 }, { token: " 4", prob: 0.067 }
     ]},
   ],
-  // The full generated sequence for these positions
-  generated_text: "Certainly! Here\u2019s a suggested 3-day itinerary for Tokyo that aligns with your interests:",
+  generated_text: "## Investment Thesis: [Target] B2B SaaS Platform\n\nA compelling acquisition at 8x EBITDA multiple with operational",
 };
 
 const LAYER9_DATA = {
   // First 16 token IDs from the response
-  token_ids:  [96556, 0, 5810, 753, 264, 12090, 220, 18, 11477, 74004, 369, 27286, 430, 5398, 82, 449],
-  token_texts: ["certainly", "!", " here", "\u2019s", " a", " suggested", " ", "3", "-day", " itinerary", " for", " tokyo", " that", " align", "s", " with"],
-  total_response_tokens: 517,
+  token_ids:  [565, 26943, 60602, 25, 510, 6531, 60, 426, 17, 328, 61822, 5765, 25488, 198, 198, 32],
+  token_texts: ["##", " investment", " thesis", ":", " [", "target", "]", " b", "2", "b", " saas", " platform", "\n\n", "a", " compelling", " acquisition"],
+  total_response_tokens: 523,
   decoding_method: "tiktoken (cl100k_base)",
-  raw_output: "certainly! here\u2019s a suggested 3 day itinerary for tokyo that aligns with your interests: day 1: cultural exploration and local experiences morning: start your day with a visit to the senso ji temple in asakusa, tokyo's oldest temple.",
+  raw_output: "## investment thesis: [target] b2b saas platform\n\na compelling acquisition opportunity at 8x ebitda. the target demonstrates strong fundamentals with 18% revenue cagr, 34% gross margins, and 95% customer retention.",
 };
 
 const LAYER10_DATA = {
-  raw_output: "certainly! here\u2019s a suggested 3 day itinerary for tokyo that aligns with your interests: day 1: cultural exploration and local experiences morning: start your day with a visit to the senso ji temple in asakusa, tokyo's oldest temple. arrive early to enjoy the peaceful atmosphere before it gets crowded. late morning: explore the nearby nakamise shopping street. here, you can try traditional snacks and pick up some unique souvenirs.",
+  raw_output: "investment thesis: target b2b saas platform. a compelling acquisition opportunity at 8x ebitda. the target demonstrates strong fundamentals with 18% revenue cagr, 34% gross margins, and 95% customer retention. key value creation levers include operational efficiency improvements, cross-sell into existing portfolio, and international expansion.",
   formatting_rules: [
     { rule: "Capitalize proper nouns & sentence starts", icon: "Aa", color: "#4ec9b0" },
     { rule: "Add markdown formatting (bold, headers)", icon: "B*", color: "#61afef" },
@@ -756,41 +754,48 @@ const LAYER10_DATA = {
     { rule: "Ensure consistent tense and tone", icon: "\u2713\u2009", color: "#ffd700" },
   ],
   formatted_lines: [
-    { type: "text", text: "Certainly! Here\u2019s a suggested 3-day itinerary" },
-    { type: "text", text: "for Tokyo that aligns with your interests:" },
+    { type: "header", text: "Investment Thesis: [Target] B2B SaaS" },
     { type: "blank" },
-    { type: "header", text: "Day 1: Cultural Exploration" },
-    { type: "bullet", text: "Morning: Visit the Senso-ji Temple" },
-    { type: "bullet", text: "Late Morning: Nakamise Shopping Street" },
-    { type: "bullet", text: "Lunch: Try tempura in Asakusa" },
-    { type: "bullet", text: "Afternoon: Edo-Tokyo Museum" },
-    { type: "bullet", text: "Evening: Traditional tea ceremony" },
+    { type: "text", text: "A compelling acquisition opportunity at" },
+    { type: "text", text: "8x EBITDA with strong fundamentals." },
+    { type: "blank" },
+    { type: "header", text: "Key Metrics" },
+    { type: "bullet", text: "Revenue CAGR: 18%" },
+    { type: "bullet", text: "Gross Margins: 34%" },
+    { type: "bullet", text: "Customer Retention: 95%" },
+    { type: "blank" },
+    { type: "header", text: "Value Creation Levers" },
+    { type: "bullet", text: "Operational efficiency improvements" },
+    { type: "bullet", text: "Cross-sell into existing portfolio" },
   ],
   final_display_lines: [
-    { type: "intro", text: "Certainly! Here\u2019s a suggested 3-day itinerary for Tokyo" },
-    { type: "intro", text: "that aligns with your interests:" },
+    { type: "header", text: "Investment Thesis: [Target] B2B SaaS Platform" },
     { type: "blank" },
-    { type: "header", text: "Day 1: Cultural Exploration and Local Experiences" },
-    { type: "bullet", text: "Morning: Visit the Senso-ji Temple in Asakusa" },
-    { type: "bullet", text: "Late Morning: Explore Nakamise Shopping Street" },
-    { type: "bullet", text: "Lunch: Try tempura in a local restaurant" },
-    { type: "bullet", text: "Afternoon: Visit the Edo-Tokyo Museum" },
-    { type: "bullet", text: "Evening: Traditional tea ceremony" },
+    { type: "intro", text: "A compelling acquisition opportunity at 8x EBITDA" },
+    { type: "intro", text: "with strong fundamentals and clear value creation." },
     { type: "blank" },
-    { type: "header", text: "Day 2: Modern Tokyo and Technology" },
-    { type: "bullet", text: "Morning: teamLab Borderless in Odaiba" },
-    { type: "bullet", text: "Lunch: Fresh sushi in Odaiba" },
-    { type: "bullet", text: "Afternoon: Miraikan Science Museum" },
-    { type: "bullet", text: "Evening: Explore Akihabara" },
+    { type: "header", text: "Key Metrics" },
+    { type: "bullet", text: "Revenue CAGR: 18% (3-year)" },
+    { type: "bullet", text: "Gross Margins: 34%" },
+    { type: "bullet", text: "EBITDA: $42M" },
+    { type: "bullet", text: "Customer Retention: 95%" },
     { type: "blank" },
-    { type: "header", text: "Day 3: Culinary Experiences and Relaxation" },
-    { type: "bullet", text: "Morning: Tsukiji Outer Market & cooking class" },
-    { type: "bullet", text: "Lunch: Enjoy your cooking class meal" },
-    { type: "bullet", text: "Afternoon: Hamarikyu Gardens" },
-    { type: "bullet", text: "Evening: Kaiseki restaurant dinner" },
+    { type: "header", text: "Investment Rationale" },
+    { type: "bullet", text: "Market leader in growing vertical" },
+    { type: "bullet", text: "Recurring revenue with high retention" },
+    { type: "bullet", text: "Proven management team" },
     { type: "blank" },
-    { type: "intro", text: "This itinerary balances culture, technology, and" },
-    { type: "intro", text: "culinary experiences. Enjoy your trip!" },
+    { type: "header", text: "Value Creation Plan" },
+    { type: "bullet", text: "Operational efficiency improvements" },
+    { type: "bullet", text: "Cross-sell into existing portfolio companies" },
+    { type: "bullet", text: "International expansion (EU, APAC)" },
+    { type: "blank" },
+    { type: "header", text: "Risks & Mitigants" },
+    { type: "bullet", text: "Customer concentration: top 10 = 35% rev" },
+    { type: "bullet", text: "Integration risk: phased approach planned" },
+    { type: "blank" },
+    { type: "intro", text: "Recommendation: Proceed to final due diligence" },
+    { type: "intro", text: "and IC approval at 8x EBITDA ($336M EV)." },
   ],
 };
 
@@ -1045,7 +1050,7 @@ function playLayer1() {
               { text: '"session_id":', indent: 1, color: COLORS.textDim, value: " null", vc: COLORS.textDim },
               { text: "}", indent: 0, color: COLORS.textDim },
             ];
-            const lineH = 26, totalH = lines.length * lineH + 20, boxW = 500;
+            const lineH = 26, totalH = lines.length * lineH + 20, boxW = 620;
 
             packetG.append("text").attr("x", 0).attr("y", -totalH / 2 - 18)
               .attr("text-anchor", "middle").attr("fill", COLORS.teal)
@@ -1290,7 +1295,7 @@ function playLayer2() {
     const arrowY2 = rowY + CHAR_H + 55;
 
     lg.append("text")
-      .attr("x", W / 2).attr("y", arrowY1 + 12)
+      .attr("x", W / 2 + 30).attr("y", arrowY1 + 20)
       .attr("text-anchor", "middle")
       .attr("fill", COLORS.textDim).attr("font-size", 12)
       .attr("font-family", FONT_MONO).attr("opacity", 0)
@@ -1557,7 +1562,7 @@ function playLayer3() {
     const stripX = (W - stripW) / 2;
 
     // Matrix bracket left (clear of token labels)
-    const lbx = stripX - 60;
+    const lbx = stripX - 100;
     lg.append("path")
       .attr("d", `M ${lbx + 8} ${stripY - 8} L ${lbx} ${stripY - 8} L ${lbx} ${stripY + matrixH + 2} L ${lbx + 8} ${stripY + matrixH + 2}`)
       .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
@@ -1650,11 +1655,11 @@ function playLayer3() {
         .attr("opacity", 0).transition().duration(500).attr("opacity", 0.5);
 
       // Draw connecting lines between semantically related tokens
-      // (trip-Tokyo, Plan-day, a-to as function words)
+      // (investment-acquisition as domain pair, investment-thesis as concept)
       const connections = [
-        [5, 7, 0.15],  // trip - Tokyo
-        [0, 4, 0.10],  // Plan - -day
-        [1, 6, 0.10],  // a - to
+        [2, 6, 0.15],  // investment - acquisition
+        [2, 3, 0.12],  // investment - thesis
+        [0, 3, 0.08],  // Draft - thesis
       ];
 
       connections.forEach(([i, j, op]) => {
@@ -1696,19 +1701,29 @@ function playLayer3() {
           .attr("r", 3)
           .attr("fill", COLORS.text);
 
-        // Label
-        const labelOffsetX = (cx > plotW / 2) ? 16 : -16;
-        const anchor = (cx > plotW / 2) ? "start" : "end";
+        // Label — special case: "investment" (index 2) upper-left of dot
+        let labelOffsetX, labelOffsetY, anchor;
+        if (label.trim().toLowerCase() === "investment") {
+          labelOffsetX = -16;
+          labelOffsetY = -14;
+          anchor = "end";
+        } else {
+          labelOffsetX = (cx > plotW / 2) ? 16 : -16;
+          labelOffsetY = -14;
+          anchor = (cx > plotW / 2) ? "start" : "end";
+        }
         dotG.append("text")
-          .attr("x", labelOffsetX).attr("y", -14)
+          .attr("x", labelOffsetX).attr("y", labelOffsetY)
           .attr("text-anchor", anchor)
           .attr("fill", color).attr("font-size", 13).attr("font-weight", 600)
           .attr("font-family", FONT_MONO).text(label);
 
         // Token ID small
+        const idAnchor = (label.trim().toLowerCase() === "investment") ? "end" : anchor;
+        const idOffsetX = (label.trim().toLowerCase() === "investment") ? -16 : labelOffsetX;
         dotG.append("text")
-          .attr("x", labelOffsetX).attr("y", 0)
-          .attr("text-anchor", anchor)
+          .attr("x", idOffsetX).attr("y", 0)
+          .attr("text-anchor", idAnchor)
           .attr("fill", COLORS.textDim).attr("font-size", 10)
           .attr("font-family", FONT_MONO).text(tokenIds[ti]);
 
@@ -1730,7 +1745,7 @@ function playLayer3() {
 
     }, 700));
 
-  }, 7500));
+  }, 9500));
 }
 
 // ============================================================
@@ -1756,13 +1771,16 @@ function playLayer4() {
 
   // Category colors
   const CAT_COLORS = {
-    user_metadata: "#ffd700",
-    travel_history: "#e06c75",
-    user_preferences: "#61afef",
-    user_interests: "#98c379",
-    communication_style: "#c678dd",
-    user_background: "#d19a66",
-    query_history: "#56b6c2",
+    deal_history: "#ffd700",
+    target_financials: "#e06c75",
+    fund_strategy: "#61afef",
+    due_diligence: "#98c379",
+    market_research: "#c678dd",
+    portfolio_data: "#d19a66",
+    investor_profile: "#56b6c2",
+    performance: "#4ec9b0",
+    regulatory: "#e5c07b",
+    compliance: "#8b949e",
   };
 
   // ---- Phase 1: Query node appears at center ----
@@ -2085,10 +2103,11 @@ function playLayer5() {
 
   // Source colors (matching Layer 4 category colors)
   const SRC_COLORS = {
-    user_metadata: "#ffd700",
-    travel_history: "#e06c75",
-    user_preferences: "#61afef",
-    user_interests: "#98c379",
+    deal_history: "#ffd700",
+    target_financials: "#e06c75",
+    fund_strategy: "#61afef",
+    due_diligence: "#98c379",
+    market_research: "#c678dd",
   };
 
   // ---- Phase 1: Original user input ----
@@ -2105,7 +2124,7 @@ function playLayer5() {
     .transition().duration(500).attr("opacity", 0.6);
 
   // Input box
-  const inputBoxW = 340;
+  const inputBoxW = 480;
   const inputBoxH = 38;
   const inputG = lg.append("g")
     .attr("transform", `translate(${centerX}, ${inputY})`).attr("opacity", 0);
@@ -2235,9 +2254,9 @@ function playLayer5() {
       .transition().duration(400).attr("opacity", 0.3);
 
     const nodeColors = {
-      user_metadata: "#ffd700",
-      travel_history: "#e06c75",
-      user_preferences: "#61afef",
+      deal_history: "#ffd700",
+      target_financials: "#e06c75",
+      fund_strategy: "#61afef",
       response_generation: COLORS.teal,
     };
 
@@ -2811,7 +2830,7 @@ function playLayer7() {
 
     // "Query →" and "Key ↓" axis labels
     lg.append("text")
-      .attr("x", matrixStartX + matrixW / 2).attr("y", matrixY - 6)
+      .attr("x", matrixStartX + matrixW / 2).attr("y", matrixY - 2)
       .attr("text-anchor", "middle")
       .attr("fill", COLORS.textDim).attr("font-size", 9)
       .attr("font-family", FONT_MONO).attr("opacity", 0)
@@ -2819,7 +2838,7 @@ function playLayer7() {
       .transition().delay(400).duration(400).attr("opacity", 0.4);
 
     lg.append("text")
-      .attr("transform", `translate(${matrixStartX - 55}, ${matrixY + matrixW / 2}) rotate(-90)`)
+      .attr("transform", `translate(${matrixStartX - 90}, ${matrixY + matrixW / 2}) rotate(-90)`)
       .attr("text-anchor", "middle")
       .attr("fill", COLORS.textDim).attr("font-size", 9)
       .attr("font-family", FONT_MONO).attr("opacity", 0)
@@ -2907,15 +2926,23 @@ function playLayer7() {
 
       // Token nodes in a horizontal row
       const arcY = H * 0.38;
-      const tokenW = 60;
-      const tokenGap = 14;
-      const totalArcW = n * tokenW + (n - 1) * tokenGap;
+      const baseTokenW = 76;
+      const tokenGap = 10;
+      // Per-token widths: widen for longer tokens
+      const tokenWidths = tokens.map(tok => {
+        const len = tok.trim().length;
+        return len > 8 ? baseTokenW + (len - 8) * 7 : baseTokenW;
+      });
+      const totalArcW = tokenWidths.reduce((s, w) => s + w, 0) + (n - 1) * tokenGap;
       const arcStartX = centerX - totalArcW / 2;
 
       // Draw token nodes
       const tokenPositions = [];
+      let runX = arcStartX;
       tokens.forEach((tok, ti) => {
-        const x = arcStartX + ti * (tokenW + tokenGap) + tokenW / 2;
+        const tw = tokenWidths[ti];
+        const x = runX + tw / 2;
+        runX += tw + tokenGap;
         const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
         const label = tok.trim() || "\\s";
 
@@ -2925,8 +2952,8 @@ function playLayer7() {
           .attr("transform", `translate(${x}, ${arcY})`).attr("opacity", 0);
 
         tg.append("rect")
-          .attr("x", -tokenW / 2).attr("y", -16)
-          .attr("width", tokenW).attr("height", 32)
+          .attr("x", -tw / 2).attr("y", -16)
+          .attr("width", tw).attr("height", 32)
           .attr("rx", 6).attr("fill", COLORS.cardBg)
           .attr("stroke", color).attr("stroke-width", 1.5);
 
@@ -2940,8 +2967,8 @@ function playLayer7() {
         tg.transition().delay(ti * 60).duration(400).attr("opacity", 1);
       });
 
-      // Draw arcs for the last row (Tokyo attends to everything)
-      const focusRow = n - 1; // "Tokyo" — attends to all tokens
+      // Draw arcs for the last row (acquisition attends to everything)
+      const focusRow = n - 1; // "acquisition" — attends to all tokens
       const row = matrix[focusRow];
 
       // Label
@@ -3335,7 +3362,7 @@ function playLayer8() {
       // Stats below
       const statsY = outputY + 80;
       const stats = [
-        { label: "tokens generated", value: "517", color: COLORS.teal },
+        { label: "tokens generated", value: "523", color: COLORS.teal },
         { label: "temperature", value: "0.7", color: COLORS.gold },
         { label: "sampling method", value: "top-p (nucleus)", color: "#c678dd" },
       ];
@@ -3469,7 +3496,7 @@ function playLayer9() {
     setStep("steps-layer9", "step-l9-decode");
 
     // "decode()" label
-    const decodeY = gridStartY + Math.ceil(n / perRow) * (idBoxH + idGap) + 10;
+    const decodeY = gridStartY + Math.ceil(n / perRow) * (idBoxH + idGap) + 24;
     lg.append("text")
       .attr("x", centerX).attr("y", decodeY)
       .attr("text-anchor", "middle")
@@ -3528,9 +3555,9 @@ function playLayer9() {
     animationPhase = 3;
     setStep("steps-layer9", "step-l9-merge");
 
-    // Fade out ID boxes, arrows, and labels above the text
-    lg.selectAll(".id-box").transition().duration(500).attr("opacity", 0);
-    lg.selectAll("line").transition().duration(500).attr("opacity", 0);
+    // Fade out ID boxes, arrows, and labels above the text — then remove
+    lg.selectAll(".id-box").transition().duration(500).attr("opacity", 0).remove();
+    lg.selectAll("line").transition().duration(500).attr("opacity", 0).remove();
 
     // Move text fragments together into a single line
     const textGroups = lg.property("__textGroups");
@@ -3555,11 +3582,12 @@ function playLayer9() {
       tg.transition().delay(i * 30).duration(800).ease(d3.easeCubicInOut)
         .attr("transform", `translate(${targetX}, ${mergeY})`);
 
-      // Fade the box border
+      // Fade the box border then remove the rect
       tg.select("rect")
         .transition().delay(i * 30 + 400).duration(400)
         .attr("stroke-opacity", 0).attr("fill-opacity", 0)
-        .attr("width", fragW).attr("height", 28);
+        .attr("width", fragW).attr("height", 28)
+        .remove();
 
       // Reposition text within
       tg.select("text")
@@ -4008,7 +4036,7 @@ function playLayer10() {
             .attr("text-anchor", "middle")
             .attr("fill", COLORS.textDim).attr("font-size", 10)
             .attr("font-family", FONT_MONO).attr("opacity", 0)
-            .text("10 layers \u2022 517 tokens \u2022 1 response")
+            .text("10 layers \u2022 523 tokens \u2022 1 response")
             .transition().delay(finalLines.length * 50 + 300).duration(500).attr("opacity", 0.4);
 
         }, 600));
