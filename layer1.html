@@ -1,0 +1,4122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Deconstruction — Layers 1–10</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* --- Left: scrollable narrative --- */
+  #narrative {
+    width: 40%;
+    position: relative;
+    z-index: 10;
+  }
+
+  .layer-section {
+    min-height: 100vh;
+    padding: 80px 48px 120px 60px;
+  }
+
+  .layer-section .layer-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #4ec9b0;
+    color: #0d1117;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .layer-section h1 {
+    font-size: 36px;
+    font-weight: 600;
+    color: #e6edf3;
+    margin-bottom: 8px;
+  }
+
+  .layer-section .subtitle {
+    font-size: 16px;
+    color: #4ec9b0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+
+  .layer-section p {
+    font-size: 18px;
+    line-height: 1.7;
+    color: #8b949e;
+    margin-bottom: 20px;
+  }
+
+  .layer-section p strong {
+    color: #c9d1d9;
+  }
+
+  .layer-section .step-list {
+    list-style: none;
+    margin: 24px 0;
+  }
+
+  .layer-section .step-list li {
+    font-size: 16px;
+    color: #8b949e;
+    padding: 8px 0 8px 24px;
+    position: relative;
+    transition: color 0.4s ease;
+  }
+
+  .layer-section .step-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #30363d;
+    transition: background 0.4s ease;
+  }
+
+  .layer-section .step-list li.active { color: #e6edf3; }
+  .layer-section .step-list li.active::before { background: #4ec9b0; }
+  .layer-section .step-list li.done { color: #8b949e; }
+  .layer-section .step-list li.done::before { background: #4ec9b0; }
+
+  .layer-divider {
+    height: 40vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 60px;
+  }
+
+  .layer-divider .divider-line {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #30363d, transparent);
+  }
+
+  /* Scroll indicator */
+  .scroll-hint {
+    text-align: center;
+    color: #30363d;
+    font-size: 13px;
+    margin-top: 40px;
+    animation: pulse 2s ease infinite;
+  }
+
+  .scroll-hint .arrow {
+    display: block;
+    margin-top: 8px;
+    font-size: 20px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* --- Right: fixed visualization --- */
+  #viz {
+    width: 60%;
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #viz svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* --- Controls --- */
+  #controls {
+    position: fixed;
+    bottom: 32px;
+    left: 60px;
+    z-index: 100;
+    display: flex;
+    gap: 12px;
+  }
+
+  #controls button {
+    background: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    padding: 10px 24px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  #controls button:hover {
+    background: #30363d;
+    border-color: #4ec9b0;
+    color: #e6edf3;
+  }
+
+  #controls button.primary {
+    background: #4ec9b0;
+    color: #0d1117;
+    border-color: #4ec9b0;
+    font-weight: 600;
+  }
+
+  #controls button.primary:hover {
+    background: #3db89e;
+  }
+
+  /* --- Layer indicator (fixed) --- */
+  #layer-indicator {
+    position: fixed;
+    top: 24px;
+    left: 60px;
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  #layer-indicator .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #30363d;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  #layer-indicator .dot.active {
+    background: #4ec9b0;
+    box-shadow: 0 0 8px rgba(78, 201, 176, 0.5);
+  }
+
+  #layer-indicator .dot-label {
+    font-size: 12px;
+    color: #8b949e;
+    font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+    margin-left: 4px;
+    transition: color 0.3s ease;
+  }
+
+  #layer-indicator .dot-label.active {
+    color: #4ec9b0;
+  }
+</style>
+</head>
+<body>
+
+<!-- Layer indicator dots -->
+<div id="layer-indicator">
+  <div class="dot active" data-layer="1"></div>
+  <div class="dot" data-layer="2"></div>
+  <div class="dot" data-layer="3"></div>
+  <div class="dot" data-layer="4"></div>
+  <div class="dot" data-layer="5"></div>
+  <div class="dot" data-layer="6"></div>
+  <div class="dot" data-layer="7"></div>
+  <div class="dot" data-layer="8"></div>
+  <div class="dot" data-layer="9"></div>
+  <div class="dot" data-layer="10"></div>
+  <span class="dot-label active" id="layer-label">Layer 1: Raw Input</span>
+</div>
+
+<!-- Scrollable narrative (left) -->
+<div id="narrative">
+
+  <!-- ==================== LAYER 1 ==================== -->
+  <div class="layer-section" id="section-layer1">
+    <div class="layer-badge">1</div>
+    <h1>Raw Input</h1>
+    <div class="subtitle">Input Processing</div>
+
+    <p>
+      Every interaction with an LLM begins here. The user types a message
+      &mdash; a string of characters, nothing more. At this stage, the system
+      has <strong>no understanding</strong> of what the words mean.
+    </p>
+    <p>
+      The raw input layer captures the text exactly as entered and wraps it
+      in a structured object with metadata: a timestamp and a session identifier.
+    </p>
+    <p>Watch how a simple sentence becomes structured data:</p>
+
+    <ul class="step-list" id="steps-layer1">
+      <li id="step-cursor">Prompt field awaits input</li>
+      <li id="step-typing">Characters arrive one by one</li>
+      <li id="step-metadata">Metadata is attached</li>
+      <li id="step-packet">Input object is assembled</li>
+    </ul>
+
+    <div class="scroll-hint" id="scroll-hint-1">
+      Scroll down to continue
+      <span class="arrow">&#8595;</span>
+    </div>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 2 ==================== -->
+  <div class="layer-section" id="section-layer2">
+    <div class="layer-badge">2</div>
+    <h1>Tokenization</h1>
+    <div class="subtitle">Encode</div>
+
+    <p>
+      An LLM cannot read text. It works with <strong>numbers</strong>.
+      The tokenizer splits the input string into <strong>tokens</strong>
+      &mdash; subword units that may be whole words, parts of words, or
+      single characters &mdash; and maps each one to an integer ID from
+      a vocabulary of 100,277 entries.
+    </p>
+    <p>
+      This is a <strong>deterministic, reversible</strong> transformation.
+      No meaning is extracted yet &mdash; just a mechanical conversion from
+      text to a sequence of integers that the model&rsquo;s math can operate on.
+    </p>
+    <p>Watch the text get sliced into tokens:</p>
+
+    <ul class="step-list" id="steps-layer2">
+      <li id="step-show-text">Text string from Layer 1</li>
+      <li id="step-slice">Token boundaries are identified</li>
+      <li id="step-separate">Tokens separate into groups</li>
+      <li id="step-ids">Integer IDs are assigned</li>
+      <li id="step-summary">Encoding summary</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 3 ==================== -->
+  <div class="layer-section" id="section-layer3">
+    <div class="layer-badge">3</div>
+    <h1>Embedding Layer</h1>
+    <div class="subtitle">Vector Representation</div>
+
+    <p>
+      Now each token ID is converted into a <strong>dense vector</strong>
+      &mdash; a list of 1,536 floating-point numbers. These vectors live in
+      a high-dimensional space where <strong>meaning is encoded as
+      geometry</strong>: words with similar meanings end up near each other.
+    </p>
+    <p>
+      The model doesn&rsquo;t &ldquo;know&rdquo; what &ldquo;Tokyo&rdquo; means.
+      It only knows that the vector for &ldquo;Tokyo&rdquo; is close to
+      &ldquo;trip&rdquo; and far from &ldquo;3&rdquo;. Meaning is
+      <strong>distance</strong>.
+    </p>
+    <p>Watch integers become geometry:</p>
+
+    <ul class="step-list" id="steps-layer3">
+      <li id="step-l3-tokens">Token IDs from Layer 2</li>
+      <li id="step-l3-expand">Each ID expands into 1,536 dimensions</li>
+      <li id="step-l3-matrix">Embedding matrix forms</li>
+      <li id="step-l3-space">Tokens mapped to semantic space</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 4 ==================== -->
+  <div class="layer-section" id="section-layer4">
+    <div class="layer-badge">4</div>
+    <h1>Semantic Search</h1>
+    <div class="subtitle">Vector Similarity</div>
+
+    <p>
+      Before generating a response, the system searches its memory. The
+      query embedding from Layer 3 is compared against a <strong>knowledge
+      base</strong> of stored documents using <strong>cosine similarity</strong>
+      &mdash; a measure of how closely two vectors point in the same direction.
+    </p>
+    <p>
+      The result is a ranked list of the most relevant context. &ldquo;Relevance&rdquo;
+      is not understanding &mdash; it&rsquo;s just a <strong>number between 0 and 1</strong>.
+      A high similarity score means the document&rsquo;s vector is geometrically
+      close to the query vector. Nothing more.
+    </p>
+    <p>Watch the search unfold:</p>
+
+    <ul class="step-list" id="steps-layer4">
+      <li id="step-l4-query">Query embedding enters the search</li>
+      <li id="step-l4-docs">Knowledge base documents appear</li>
+      <li id="step-l4-compare">Cosine similarity is computed</li>
+      <li id="step-l4-retrieve">Top 5 documents are retrieved</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 5 ==================== -->
+  <div class="layer-section" id="section-layer5">
+    <div class="layer-badge">5</div>
+    <h1>Context Injection</h1>
+    <div class="subtitle">Model Context Protocol</div>
+
+    <p>
+      The retrieved documents from Layer 4 are now <strong>injected</strong>
+      into the prompt. The Model Context Protocol (MCP) assembles a
+      structured context object that combines the user&rsquo;s original input
+      with memory, system state, and retrieved knowledge.
+    </p>
+    <p>
+      This is how the model gets its &ldquo;memory&rdquo; &mdash; not by
+      remembering, but by having relevant information <strong>physically
+      inserted</strong> into the prompt text. The model sees everything
+      at once, as if it always knew.
+    </p>
+    <p>Watch the context assembly:</p>
+
+    <ul class="step-list" id="steps-layer5">
+      <li id="step-l5-input">Original user input</li>
+      <li id="step-l5-context">Retrieved context slides in</li>
+      <li id="step-l5-structure">MCP structure assembles</li>
+      <li id="step-l5-enriched">Enriched prompt is ready</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 6 ==================== -->
+  <div class="layer-section" id="section-layer6">
+    <div class="layer-badge">6</div>
+    <h1>Task Decomposition</h1>
+    <div class="subtitle">Orchestration</div>
+
+    <p>
+      The enriched prompt doesn&rsquo;t go straight to the model. An
+      <strong>orchestration framework</strong> first breaks it into a
+      sequence of sub-tasks &mdash; a chain of smaller, focused operations
+      that execute one after another.
+    </p>
+    <p>
+      This is engineering, not intelligence. A <strong>SequentialChain</strong>
+      defines which steps run in which order. Each step receives the output
+      of the previous one. The model is just one component in a larger
+      pipeline.
+    </p>
+    <p>Watch the chain execute:</p>
+
+    <ul class="step-list" id="steps-layer6">
+      <li id="step-l6-input">Enriched prompt enters the chain</li>
+      <li id="step-l6-chain">Sequential chain is defined</li>
+      <li id="step-l6-execute">Steps execute in sequence</li>
+      <li id="step-l6-output">Output passes to the model</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 7 ==================== -->
+  <div class="layer-section" id="section-layer7">
+    <div class="layer-badge">7</div>
+    <h1>Attention Mechanism</h1>
+    <div class="subtitle">Multi-Head Self-Attention</div>
+
+    <p>
+      This is the <strong>computational heart</strong> of the transformer.
+      Every token computes how much it should &ldquo;attend to&rdquo;
+      every other token. The result is an <strong>attention matrix</strong>
+      &mdash; a grid of weights that captures relationships and dependencies
+      between words.
+    </p>
+    <p>
+      GPT-4 runs this operation across <strong>96 attention heads</strong>
+      in parallel, repeated across <strong>96 layers</strong> deep &mdash;
+      over 9,000 different &ldquo;perspectives&rdquo; on the same input.
+      Each head learns to focus on different patterns: syntax, semantics,
+      position, or something humans can&rsquo;t name.
+    </p>
+    <p>Watch one attention head at work:</p>
+
+    <ul class="step-list" id="steps-layer7">
+      <li id="step-l7-tokens">Tokens enter the attention layer</li>
+      <li id="step-l7-matrix">Attention weights are computed</li>
+      <li id="step-l7-highlight">Token relationships revealed</li>
+      <li id="step-l7-arcs">Attention connections visualized</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 8 ==================== -->
+  <div class="layer-section" id="section-layer8">
+    <div class="layer-badge">8</div>
+    <h1>Next-Token Prediction</h1>
+    <div class="subtitle">Probability Sampling</div>
+
+    <p>
+      The transformer outputs a <strong>probability distribution</strong>
+      over 100,277 possible tokens. It does not &ldquo;choose&rdquo; a word
+      &mdash; it assigns a probability to every token in its vocabulary,
+      then <strong>samples</strong> from that distribution.
+    </p>
+    <p>
+      Temperature controls how &ldquo;creative&rdquo; the sampling is:
+      lower temperature concentrates probability on the top choice,
+      higher temperature flattens it. Top-p filtering removes unlikely
+      tokens from consideration. The result is <strong>rolling weighted
+      dice</strong>, one token at a time.
+    </p>
+    <p>Watch the dice roll:</p>
+
+    <ul class="step-list" id="steps-layer8">
+      <li id="step-l8-setup">Probability distribution over vocabulary</li>
+      <li id="step-l8-sample">Token candidates compete</li>
+      <li id="step-l8-sequence">Tokens are generated one by one</li>
+      <li id="step-l8-output">Response takes shape</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 9 ==================== -->
+  <div class="layer-section" id="section-layer9">
+    <div class="layer-badge">9</div>
+    <h1>Detokenization</h1>
+    <div class="subtitle">Decode</div>
+
+    <p>
+      The transformer has produced a sequence of <strong>517 token IDs</strong>.
+      These are just integers &mdash; meaningless to a human. The tokenizer
+      now runs in <strong>reverse</strong>, mapping each integer back to its
+      corresponding text fragment.
+    </p>
+    <p>
+      The result is raw, unformatted text: no capitalization, no structure,
+      no markdown. Just a continuous stream of characters. This is the
+      <strong>inverse</strong> of Layer 2 &mdash; a mechanical, deterministic
+      conversion from numbers back to text.
+    </p>
+    <p>Watch the decode:</p>
+
+    <ul class="step-list" id="steps-layer9">
+      <li id="step-l9-ids">Token IDs from the transformer</li>
+      <li id="step-l9-decode">IDs are mapped back to text</li>
+      <li id="step-l9-merge">Fragments merge into raw text</li>
+      <li id="step-l9-raw">Raw, unformatted output</li>
+    </ul>
+  </div>
+
+  <!-- Spacer / divider -->
+  <div class="layer-divider"><div class="divider-line"></div></div>
+
+  <!-- ==================== LAYER 10 ==================== -->
+  <div class="layer-section" id="section-layer10">
+    <div class="layer-badge">10</div>
+    <h1>Post-Processing</h1>
+    <div class="subtitle">Formatting &amp; Presentation</div>
+
+    <p>
+      The raw text from Layer 9 is <strong>unformatted chaos</strong>: no
+      capitalization, no structure, no visual hierarchy. It&rsquo;s a continuous
+      stream of lowercase characters that no user would want to read.
+    </p>
+    <p>
+      A <strong>formatting pipeline</strong> now applies a sequence of rules
+      &mdash; capitalizing proper nouns, adding markdown headers and bold text,
+      inserting bullet points, and ensuring consistent tone. This is pure
+      <strong>string manipulation</strong>, not intelligence.
+    </p>
+    <p>Watch the text get polished:</p>
+
+    <ul class="step-list" id="steps-layer10">
+      <li id="step-l10-raw">Raw text from Layer 9</li>
+      <li id="step-l10-rules">Formatting rules are applied</li>
+      <li id="step-l10-transform">Text transforms</li>
+      <li id="step-l10-final">Polished response delivered</li>
+    </ul>
+  </div>
+
+  <!-- Bottom padding so last section can fully scroll into view -->
+  <div style="height: 40vh;"></div>
+</div>
+
+<!-- Fixed visualization (right) -->
+<div id="viz">
+  <svg id="main-svg"></svg>
+</div>
+
+<!-- Controls -->
+<div id="controls">
+  <button class="primary" id="btn-replay">Replay</button>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const LAYER1_DATA = {
+  user_message: "Plan a 3-day trip to Tokyo",
+  timestamp: "2026-02-25T20:15:21.060881+00:00",
+  session_id: null,
+};
+
+const LAYER2_DATA = {
+  input_text: "Plan a 3-day trip to Tokyo",
+  tokens:    ["Plan", " a", " ", "3", "-day", " trip", " to", " Tokyo"],
+  token_ids: [21119, 264, 220, 18, 11477, 8577, 311, 27286],
+  num_tokens: 8,
+  encoding_method: "tiktoken (cl100k_base)",
+  vocab_size: 100277,
+};
+
+const LAYER3_DATA = {
+  tokens:    ["Plan", " a", " ", "3", "-day", " trip", " to", " Tokyo"],
+  token_ids: [21119, 264, 220, 18, 11477, 8577, 311, 27286],
+  embedding_dim: 1536,
+  shape: [8, 1536],
+  // Real first-5 values from OpenAI embeddings API
+  token_vectors: [
+    [-0.001, 0.031, 0.003, -0.036, 0.002],   // Plan
+    [0.020, -0.007, -0.024, 0.055, 0.020],    // a
+    [-0.014, -0.003, 0.014, 0.060, -0.033],   // (space)
+    [0.017, -0.023, 0.068, -0.040, 0.008],    // 3
+    [0.004, 0.004, 0.041, 0.020, 0.005],      // -day
+    [-0.017, -0.004, -0.040, -0.032, -0.035], // trip
+    [0.034, -0.009, -0.000, 0.045, 0.010],    // to
+    [-0.011, -0.042, -0.033, 0.062, -0.010],  // Tokyo
+  ],
+  // Pre-computed 2D projection (derived from dims 0,3 for better spread)
+  projection_2d: [
+    { x: -0.001, y: -0.036 },  // Plan
+    { x: 0.020,  y: 0.055 },   // a
+    { x: -0.014, y: 0.060 },   // (space)
+    { x: 0.017,  y: -0.040 },  // 3
+    { x: 0.004,  y: 0.020 },   // -day
+    { x: -0.017, y: -0.032 },  // trip
+    { x: 0.034,  y: 0.045 },   // to
+    { x: -0.011, y: 0.062 },   // Tokyo
+  ],
+};
+
+const LAYER4_DATA = {
+  search_method: "cosine_similarity",
+  top_k: 5,
+  total_docs: 10,
+  all_docs: [
+    { id: "doc_05", category: "user_metadata",       similarity: 0.4289, snippet: "Timezone: GMT+1, typically plans trips 2-3 months ahead", retrieved: true },
+    { id: "doc_03", category: "travel_history",       similarity: 0.4141, snippet: "Previous trip to Kyoto, enjoyed temples and tea ceremonies", retrieved: true },
+    { id: "doc_02", category: "user_preferences",     similarity: 0.3334, snippet: "Travel preferences: morning activities, cultural sites, local experiences", retrieved: true },
+    { id: "doc_10", category: "user_interests",       similarity: 0.2037, snippet: "Enjoys cooking, especially Japanese and Mediterranean cuisine", retrieved: true },
+    { id: "doc_06", category: "user_interests",       similarity: 0.1697, snippet: "Interested in technology, AI, and science topics", retrieved: true },
+    { id: "doc_01", category: "user_preferences",     similarity: 0.1616, snippet: "User previously mentioned: likes museums and traditional food", retrieved: false },
+    { id: "doc_04", category: "user_preferences",     similarity: 0.1254, snippet: "Budget range: moderate, prefers quality over luxury", retrieved: false },
+    { id: "doc_07", category: "communication_style",  similarity: 0.0961, snippet: "Prefers structured, step-by-step explanations with examples", retrieved: false },
+    { id: "doc_08", category: "user_background",      similarity: 0.0833, snippet: "Has background in software engineering and data science", retrieved: false },
+    { id: "doc_09", category: "query_history",        similarity: 0.0415, snippet: "Previously asked about machine learning fundamentals", retrieved: false },
+  ],
+};
+
+const LAYER5_DATA = {
+  user_input: "Plan a 3-day trip to Tokyo",
+  system_state: "conversation_turn_1",
+  retrieved_context: [
+    { text: "Timezone: GMT+1, typically plans trips 2-3 months ahead", source: "user_metadata" },
+    { text: "Previous trip to Kyoto, enjoyed temples and tea ceremonies", source: "travel_history" },
+    { text: "Travel preferences: morning activities, cultural sites, local experiences", source: "user_preferences" },
+    { text: "Enjoys cooking, especially Japanese and Mediterranean cuisine", source: "user_interests" },
+    { text: "Interested in technology, AI, and science topics", source: "user_interests" },
+  ],
+  memory_objects: ["user_interests", "user_metadata", "travel_history", "user_preferences"],
+  context_graph: ["user_metadata", "travel_history", "user_preferences", "response_generation"],
+};
+
+const LAYER6_DATA = {
+  orchestrator: "LangChain",
+  chain_type: "SequentialChain",
+  steps: [
+    { name: "understand_intent", label: "Understand Intent", desc: "Parse the user's goal and constraints", icon: "\u{1F50D}" },
+    { name: "gather_travel_requirements", label: "Gather Requirements", desc: "Extract dates, destination, preferences", icon: "\u{1F4CB}" },
+    { name: "research_attractions", label: "Research Attractions", desc: "Query knowledge base for Tokyo activities", icon: "\u{1F3EF}" },
+    { name: "create_itinerary", label: "Create Itinerary", desc: "Build day-by-day schedule", icon: "\u{1F5D3}" },
+    { name: "format_output", label: "Format Output", desc: "Structure response with headers and bullets", icon: "\u{2728}" },
+  ],
+};
+
+const LAYER7_DATA = {
+  mechanism: "Multi-Head Self-Attention",
+  num_heads: 96,
+  num_layers: 96,
+  context_window: 128000,
+  tokens: ["Plan", " a", " ", "3", "-day", " trip", " to", " Tokyo"],
+  attention_matrix: [
+    [1.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0   ],
+    [0.4175, 0.5825, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0   ],
+    [0.0437, 0.3266, 0.6297, 0.0,    0.0,    0.0,    0.0,    0.0   ],
+    [0.0604, 0.2799, 0.3873, 0.2725, 0.0,    0.0,    0.0,    0.0   ],
+    [0.0733, 0.0515, 0.2621, 0.3768, 0.2363, 0.0,    0.0,    0.0   ],
+    [0.085,  0.1656, 0.0835, 0.1003, 0.1664, 0.3991, 0.0,    0.0   ],
+    [0.1353, 0.0762, 0.1221, 0.068,  0.1636, 0.1785, 0.2563, 0.0   ],
+    [0.1578, 0.0653, 0.0103, 0.1368, 0.1001, 0.2044, 0.1623, 0.1628],
+  ],
+};
+
+const LAYER8_DATA = {
+  vocab_size: 100277,
+  temperature: 0.7,
+  top_p: 0.9,
+  model: "gpt-4o",
+  // Curated selection of interesting positions from the real logprobs
+  predictions: [
+    { pos: 0, chosen: "Certainly", prob: 0.279, alts: [
+      { token: "Planning", prob: 0.279 }, { token: "Certainly", prob: 0.279 },
+      { token: "Sure", prob: 0.132 }, { token: "That", prob: 0.103 }, { token: "Here's", prob: 0.080 }
+    ]},
+    { pos: 1, chosen: "!", prob: 0.999, alts: [
+      { token: "!", prob: 0.999 }, { token: ",", prob: 0.001 },
+      { token: ".", prob: 0.000 }, { token: "\u2014", prob: 0.000 }
+    ]},
+    { pos: 2, chosen: " Here", prob: 0.221, alts: [
+      { token: " Here's", prob: 0.469 }, { token: " Here", prob: 0.221 },
+      { token: " Given", prob: 0.081 }, { token: " Planning", prob: 0.081 }, { token: " Let's", prob: 0.049 }
+    ]},
+    { pos: 3, chosen: "\u2019s", prob: 0.924, alts: [
+      { token: "\u2019s", prob: 0.924 }, { token: " is", prob: 0.076 },
+      { token: " are", prob: 0.000 }
+    ]},
+    { pos: 4, chosen: " a", prob: 0.996, alts: [
+      { token: " a", prob: 0.996 }, { token: " an", prob: 0.004 }
+    ]},
+    { pos: 5, chosen: " suggested", prob: 0.383, alts: [
+      { token: " ", prob: 0.434 }, { token: " suggested", prob: 0.383 },
+      { token: " tailored", prob: 0.059 }, { token: " detailed", prob: 0.031 }, { token: " proposed", prob: 0.022 }
+    ]},
+    { pos: 7, chosen: "3", prob: 1.0, alts: [
+      { token: "3", prob: 1.0 }, { token: " three", prob: 0.000 }
+    ]},
+    { pos: 8, chosen: "-day", prob: 1.0, alts: [
+      { token: "-day", prob: 1.0 }, { token: "-Day", prob: 0.000 }
+    ]},
+    { pos: 9, chosen: " itinerary", prob: 0.997, alts: [
+      { token: " itinerary", prob: 0.997 }, { token: " trip", prob: 0.002 },
+      { token: " Tokyo", prob: 0.001 }
+    ]},
+    { pos: 11, chosen: " Tokyo", prob: 0.331, alts: [
+      { token: " a", prob: 0.375 }, { token: " Tokyo", prob: 0.331 },
+      { token: " your", prob: 0.292 }, { token: " you", prob: 0.001 }
+    ]},
+    { pos: 16, chosen: " interests", prob: 0.816, alts: [
+      { token: " interests", prob: 0.816 }, { token: " preferences", prob: 0.161 },
+      { token: " travel", prob: 0.019 }
+    ]},
+    { pos: 19, chosen: "Day", prob: 1.0, alts: [
+      { token: "Day", prob: 1.0 }, { token: "Before", prob: 0.000 },
+      { token: "DAY", prob: 0.000 }, { token: "Trip", prob: 0.000 }
+    ]},
+  ],
+  // The full generated sequence for these positions
+  generated_text: "Certainly! Here\u2019s a suggested 3-day itinerary for Tokyo that aligns with your interests:",
+};
+
+const LAYER9_DATA = {
+  // First 16 token IDs from the response
+  token_ids:  [96556, 0, 5810, 753, 264, 12090, 220, 18, 11477, 74004, 369, 27286, 430, 5398, 82, 449],
+  token_texts: ["certainly", "!", " here", "\u2019s", " a", " suggested", " ", "3", "-day", " itinerary", " for", " tokyo", " that", " align", "s", " with"],
+  total_response_tokens: 517,
+  decoding_method: "tiktoken (cl100k_base)",
+  raw_output: "certainly! here\u2019s a suggested 3 day itinerary for tokyo that aligns with your interests: day 1: cultural exploration and local experiences morning: start your day with a visit to the senso ji temple in asakusa, tokyo's oldest temple.",
+};
+
+const LAYER10_DATA = {
+  raw_output: "certainly! here\u2019s a suggested 3 day itinerary for tokyo that aligns with your interests: day 1: cultural exploration and local experiences morning: start your day with a visit to the senso ji temple in asakusa, tokyo's oldest temple. arrive early to enjoy the peaceful atmosphere before it gets crowded. late morning: explore the nearby nakamise shopping street. here, you can try traditional snacks and pick up some unique souvenirs.",
+  formatting_rules: [
+    { rule: "Capitalize proper nouns & sentence starts", icon: "Aa", color: "#4ec9b0" },
+    { rule: "Add markdown formatting (bold, headers)", icon: "B*", color: "#61afef" },
+    { rule: "Structure with bullet points", icon: "\u2022\u2009", color: "#c678dd" },
+    { rule: "Add descriptive section headers", icon: "H1", color: "#d19a66" },
+    { rule: "Ensure consistent tense and tone", icon: "\u2713\u2009", color: "#ffd700" },
+  ],
+  formatted_lines: [
+    { type: "text", text: "Certainly! Here\u2019s a suggested 3-day itinerary" },
+    { type: "text", text: "for Tokyo that aligns with your interests:" },
+    { type: "blank" },
+    { type: "header", text: "Day 1: Cultural Exploration" },
+    { type: "bullet", text: "Morning: Visit the Senso-ji Temple" },
+    { type: "bullet", text: "Late Morning: Nakamise Shopping Street" },
+    { type: "bullet", text: "Lunch: Try tempura in Asakusa" },
+    { type: "bullet", text: "Afternoon: Edo-Tokyo Museum" },
+    { type: "bullet", text: "Evening: Traditional tea ceremony" },
+  ],
+  final_display_lines: [
+    { type: "intro", text: "Certainly! Here\u2019s a suggested 3-day itinerary for Tokyo" },
+    { type: "intro", text: "that aligns with your interests:" },
+    { type: "blank" },
+    { type: "header", text: "Day 1: Cultural Exploration and Local Experiences" },
+    { type: "bullet", text: "Morning: Visit the Senso-ji Temple in Asakusa" },
+    { type: "bullet", text: "Late Morning: Explore Nakamise Shopping Street" },
+    { type: "bullet", text: "Lunch: Try tempura in a local restaurant" },
+    { type: "bullet", text: "Afternoon: Visit the Edo-Tokyo Museum" },
+    { type: "bullet", text: "Evening: Traditional tea ceremony" },
+    { type: "blank" },
+    { type: "header", text: "Day 2: Modern Tokyo and Technology" },
+    { type: "bullet", text: "Morning: teamLab Borderless in Odaiba" },
+    { type: "bullet", text: "Lunch: Fresh sushi in Odaiba" },
+    { type: "bullet", text: "Afternoon: Miraikan Science Museum" },
+    { type: "bullet", text: "Evening: Explore Akihabara" },
+    { type: "blank" },
+    { type: "header", text: "Day 3: Culinary Experiences and Relaxation" },
+    { type: "bullet", text: "Morning: Tsukiji Outer Market & cooking class" },
+    { type: "bullet", text: "Lunch: Enjoy your cooking class meal" },
+    { type: "bullet", text: "Afternoon: Hamarikyu Gardens" },
+    { type: "bullet", text: "Evening: Kaiseki restaurant dinner" },
+    { type: "blank" },
+    { type: "intro", text: "This itinerary balances culture, technology, and" },
+    { type: "intro", text: "culinary experiences. Enjoy your trip!" },
+  ],
+};
+
+// Pre-compute character-to-token mapping
+const CHAR_TOKEN_MAP = [];
+LAYER2_DATA.tokens.forEach((tok, ti) => {
+  for (let ci = 0; ci < tok.length; ci++) {
+    CHAR_TOKEN_MAP.push(ti);
+  }
+});
+
+// Token colors (8 distinct hues for 8 tokens)
+const TOKEN_COLORS = [
+  "#4ec9b0", "#e06c75", "#61afef", "#d19a66",
+  "#c678dd", "#56b6c2", "#98c379", "#e5c07b",
+];
+
+// ============================================================
+// SVG SETUP
+// ============================================================
+const svg = d3.select("#main-svg");
+const vizEl = document.getElementById("viz");
+
+let W, H, g, defs;
+
+function setupSVG() {
+  W = vizEl.clientWidth;
+  H = vizEl.clientHeight;
+  svg.attr("viewBox", `0 0 ${W} ${H}`);
+  svg.selectAll("*").remove();
+
+  defs = svg.append("defs");
+
+  // Glow filter
+  const filter = defs.append("filter").attr("id", "glow");
+  filter.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "blur");
+  const merge = filter.append("feMerge");
+  merge.append("feMergeNode").attr("in", "blur");
+  merge.append("feMergeNode").attr("in", "SourceGraphic");
+
+  // Subtle grid
+  const pattern = defs.append("pattern")
+    .attr("id", "grid").attr("width", 40).attr("height", 40)
+    .attr("patternUnits", "userSpaceOnUse");
+  pattern.append("path")
+    .attr("d", "M 40 0 L 0 0 0 40")
+    .attr("fill", "none").attr("stroke", "#161b22").attr("stroke-width", 0.5);
+
+  g = svg.append("g");
+  g.append("rect").attr("width", W).attr("height", H)
+    .attr("fill", "url(#grid)").attr("opacity", 0.5);
+}
+
+setupSVG();
+
+// ============================================================
+// SHARED CONSTANTS
+// ============================================================
+const COLORS = {
+  teal: "#4ec9b0", tealDim: "#2a7a66", gold: "#ffd700",
+  bg: "#0d1117", cardBg: "#161b22", border: "#30363d",
+  text: "#e6edf3", textDim: "#8b949e", cursor: "#4ec9b0",
+  charBg: "#1c2129", charBorder: "#2a3140",
+};
+const FONT_MONO = '"SF Mono", "Fira Code", Menlo, Consolas, monospace';
+const CHAR_W = 16;
+const CHAR_H = 30;
+const CHAR_PAD = 2;
+
+// ============================================================
+// STATE
+// ============================================================
+let currentLayer = 0;  // 0=none, 1..10
+let animationPhase = 0;
+let timers = [];
+let layer1Played = false;
+let layer2Played = false;
+let layer3Played = false;
+let layer4Played = false;
+let layer5Played = false;
+let layer6Played = false;
+let layer7Played = false;
+let layer8Played = false;
+let layer9Played = false;
+let layer10Played = false;
+
+function clearTimers() {
+  timers.forEach(t => t.stop ? t.stop() : clearTimeout(t));
+  timers = [];
+}
+
+function clearViz() {
+  clearTimers();
+  animationPhase = 0;
+  g.selectAll(".layer1-group, .layer2-group, .layer3-group, .layer4-group, .layer5-group, .layer6-group, .layer7-group, .layer8-group, .layer9-group, .layer10-group").remove();
+}
+
+// ============================================================
+// STEP LIST HELPERS
+// ============================================================
+function setStep(listId, stepId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const items = list.querySelectorAll("li");
+  let found = false;
+  items.forEach(li => {
+    li.classList.remove("active", "done");
+    if (li.id === stepId) { li.classList.add("active"); found = true; }
+    else if (!found) { li.classList.add("done"); }
+  });
+}
+
+function clearSteps(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  list.querySelectorAll("li").forEach(li => li.classList.remove("active", "done"));
+}
+
+// ============================================================
+// LAYER INDICATOR
+// ============================================================
+function setLayerIndicator(layerNum) {
+  document.querySelectorAll("#layer-indicator .dot").forEach(d => {
+    d.classList.toggle("active", +d.dataset.layer === layerNum);
+  });
+  const label = document.getElementById("layer-label");
+  label.classList.add("active");
+  if (layerNum === 1) label.textContent = "Layer 1: Raw Input";
+  else if (layerNum === 2) label.textContent = "Layer 2: Tokenization";
+  else if (layerNum === 3) label.textContent = "Layer 3: Embeddings";
+  else if (layerNum === 4) label.textContent = "Layer 4: Semantic Search";
+  else if (layerNum === 5) label.textContent = "Layer 5: Context Injection";
+  else if (layerNum === 6) label.textContent = "Layer 6: Task Decomposition";
+  else if (layerNum === 7) label.textContent = "Layer 7: Attention";
+  else if (layerNum === 8) label.textContent = "Layer 8: Prediction";
+  else if (layerNum === 9) label.textContent = "Layer 9: Detokenization";
+  else if (layerNum === 10) label.textContent = "Layer 10: Post-Processing";
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function formatTimestamp(ts) {
+  const d = new Date(ts);
+  return d.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+}
+
+// ============================================================
+//  LAYER 1 VISUALIZATION
+// ============================================================
+function playLayer1() {
+  clearViz();
+  currentLayer = 1;
+  layer1Played = true;
+  setLayerIndicator(1);
+
+  const lg = g.append("g").attr("class", "layer1-group");
+
+  animationPhase = 1;
+  setStep("steps-layer1", "step-cursor");
+
+  // --- Prompt field ---
+  const fieldGroup = lg.append("g")
+    .attr("class", "prompt-field")
+    .attr("transform", `translate(${W / 2}, ${H * 0.32})`);
+
+  fieldGroup.append("text")
+    .attr("x", 0).attr("y", -50).attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 14)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text("user_message")
+    .transition().duration(600).attr("opacity", 1);
+
+  const msg = LAYER1_DATA.user_message;
+  const promptW = msg.length * (CHAR_W + CHAR_PAD) + 20;
+  const promptX = -promptW / 2;
+
+  fieldGroup.append("rect")
+    .attr("x", promptX).attr("y", -CHAR_H / 2 - 8)
+    .attr("width", promptW).attr("height", CHAR_H + 16)
+    .attr("rx", 6).attr("fill", COLORS.cardBg)
+    .attr("stroke", COLORS.border).attr("stroke-width", 1)
+    .attr("opacity", 0).transition().duration(600).attr("opacity", 1);
+
+  const cursor = fieldGroup.append("rect")
+    .attr("class", "cursor")
+    .attr("x", promptX + 10).attr("y", -CHAR_H / 2 + 2)
+    .attr("width", 2).attr("height", CHAR_H - 4)
+    .attr("fill", COLORS.cursor).attr("opacity", 0);
+
+  cursor.transition().duration(400).attr("opacity", 1);
+
+  function blink() {
+    if (animationPhase !== 1) return;
+    cursor.transition().duration(500).attr("opacity", 0)
+      .transition().duration(500).attr("opacity", 1)
+      .on("end", blink);
+  }
+  timers.push(d3.timeout(blink, 500));
+
+  // --- Typing ---
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer1", "step-typing");
+
+    const chars = msg.split("");
+    const charsGroup = fieldGroup.append("g").attr("class", "chars");
+    let ci = 0;
+
+    const typeInt = d3.interval(() => {
+      if (ci >= chars.length) {
+        typeInt.stop();
+        cursor.transition().duration(300).attr("opacity", 0);
+
+        // --- Metadata ---
+        timers.push(d3.timeout(() => {
+          animationPhase = 3;
+          setStep("steps-layer1", "step-metadata");
+
+          const metaY = CHAR_H / 2 + 40;
+          const metaFields = [
+            { key: "timestamp", value: formatTimestamp(LAYER1_DATA.timestamp), color: COLORS.gold, delay: 0 },
+            { key: "session_id", value: "null", color: COLORS.textDim, delay: 500 },
+          ];
+          metaFields.forEach((f, fi) => {
+            const mg = fieldGroup.append("g").attr("class", "meta-field")
+              .attr("transform", `translate(0, ${metaY + 30})`).attr("opacity", 0);
+            mg.append("text").attr("x", promptX + 10).attr("y", 0)
+              .attr("fill", f.color).attr("font-size", 13)
+              .attr("font-family", FONT_MONO).text(f.key + ":");
+            mg.append("text").attr("x", promptX + 10 + f.key.length * 8 + 16).attr("y", 0)
+              .attr("fill", COLORS.textDim).attr("font-size", 13)
+              .attr("font-family", FONT_MONO).text(f.value);
+            timers.push(d3.timeout(() => {
+              mg.transition().duration(500).attr("opacity", 1)
+                .attr("transform", `translate(0, ${metaY + fi * 26})`);
+            }, f.delay));
+          });
+
+          // --- Packet ---
+          timers.push(d3.timeout(() => {
+            animationPhase = 4;
+            setStep("steps-layer1", "step-packet");
+
+            const packetG = lg.append("g").attr("class", "packet")
+              .attr("transform", `translate(${W / 2}, ${H * 0.62})`).attr("opacity", 0);
+
+            const lines = [
+              { text: "{", indent: 0, color: COLORS.textDim },
+              { text: '"user_message":', indent: 1, color: COLORS.teal, value: ` "${msg}"`, vc: COLORS.text },
+              { text: '"timestamp":', indent: 1, color: COLORS.gold, value: ` "${formatTimestamp(LAYER1_DATA.timestamp)}"`, vc: COLORS.textDim },
+              { text: '"session_id":', indent: 1, color: COLORS.textDim, value: " null", vc: COLORS.textDim },
+              { text: "}", indent: 0, color: COLORS.textDim },
+            ];
+            const lineH = 26, totalH = lines.length * lineH + 20, boxW = 500;
+
+            packetG.append("text").attr("x", 0).attr("y", -totalH / 2 - 18)
+              .attr("text-anchor", "middle").attr("fill", COLORS.teal)
+              .attr("font-size", 13).attr("font-family", FONT_MONO)
+              .attr("letter-spacing", 2).text("RAW INPUT OBJECT");
+
+            packetG.append("rect").attr("x", -boxW / 2).attr("y", -totalH / 2)
+              .attr("width", boxW).attr("height", totalH).attr("rx", 8)
+              .attr("fill", COLORS.cardBg).attr("stroke", COLORS.teal)
+              .attr("stroke-width", 1.5).attr("filter", "url(#glow)");
+
+            lines.forEach((ln, li) => {
+              const lnG = packetG.append("g")
+                .attr("transform", `translate(${-boxW / 2 + 20 + ln.indent * 24}, ${-totalH / 2 + 23 + li * lineH})`)
+                .attr("opacity", 0);
+              lnG.append("text").attr("fill", ln.color).attr("font-size", 13)
+                .attr("font-family", FONT_MONO).text(ln.text);
+              if (ln.value) {
+                lnG.append("text").attr("x", ln.text.length * 7.8 + 4)
+                  .attr("fill", ln.vc).attr("font-size", 13)
+                  .attr("font-family", FONT_MONO).text(ln.value);
+              }
+              lnG.transition().delay(li * 100).duration(400).attr("opacity", 1);
+            });
+
+            // Arrow
+            const arrowG = lg.append("g").attr("class", "arrow").attr("opacity", 0);
+            const ay1 = H * 0.32 + CHAR_H / 2 + 68;
+            const ay2 = H * 0.62 - totalH / 2 - 40;
+            arrowG.append("line").attr("x1", W / 2).attr("y1", ay1)
+              .attr("x2", W / 2).attr("y2", ay2)
+              .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
+              .attr("stroke-dasharray", "6,4").attr("opacity", 0.5);
+            arrowG.append("polygon")
+              .attr("points", `${W/2},${ay2} ${W/2-5},${ay2-10} ${W/2+5},${ay2-10}`)
+              .attr("fill", COLORS.teal).attr("opacity", 0.5);
+            arrowG.transition().duration(600).attr("opacity", 1);
+            packetG.transition().duration(600).attr("opacity", 1);
+
+            function animateDot() {
+              if (currentLayer !== 1 || animationPhase !== 4) return;
+              arrowG.append("circle").attr("cx", W / 2).attr("cy", ay1)
+                .attr("r", 3).attr("fill", COLORS.teal).attr("filter", "url(#glow)")
+                .transition().duration(1200).ease(d3.easeQuadIn)
+                .attr("cy", ay2).attr("opacity", 0).remove()
+                .on("end", () => timers.push(d3.timeout(animateDot, 800)));
+            }
+            timers.push(d3.timeout(animateDot, 300));
+          }, 1600));
+        }, 800));
+        return;
+      }
+
+      const x = promptX + 10 + ci * (CHAR_W + CHAR_PAD);
+      const cg = charsGroup.append("g")
+        .attr("transform", `translate(${x}, ${-CHAR_H / 2 + 2})`);
+      cg.append("rect").attr("width", CHAR_W).attr("height", CHAR_H - 4)
+        .attr("rx", 3).attr("fill", COLORS.charBg)
+        .attr("stroke", COLORS.charBorder).attr("stroke-width", 0.5)
+        .attr("opacity", 0).transition().duration(150).attr("opacity", 1);
+      cg.append("text").attr("x", CHAR_W / 2).attr("y", (CHAR_H - 4) / 2 + 1)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.text).attr("font-size", 15)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text(chars[ci])
+        .transition().duration(150).attr("opacity", 1);
+      cursor.attr("x", promptX + 10 + (ci + 1) * (CHAR_W + CHAR_PAD) + 4);
+      ci++;
+    }, 55);
+    timers.push(typeInt);
+  }, 1800));
+}
+
+// ============================================================
+//  LAYER 2 VISUALIZATION
+// ============================================================
+function playLayer2() {
+  clearViz();
+  currentLayer = 2;
+  layer2Played = true;
+  setLayerIndicator(2);
+  clearSteps("steps-layer1");
+
+  const lg = g.append("g").attr("class", "layer2-group");
+  const msg = LAYER2_DATA.input_text;
+  const chars = msg.split("");
+  const tokens = LAYER2_DATA.tokens;
+  const tokenIds = LAYER2_DATA.token_ids;
+
+  // Center position for the character row
+  const totalCharW = chars.length * (CHAR_W + CHAR_PAD);
+  const startX = (W - totalCharW) / 2;
+  const rowY = H * 0.28;
+
+  // ---- Phase 1: Show text as characters (carry-over from Layer 1) ----
+  animationPhase = 1;
+  setStep("steps-layer2", "step-show-text");
+
+  // Label
+  lg.append("text")
+    .attr("x", W / 2).attr("y", rowY - 50)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 14)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text("input_text")
+    .transition().duration(500).attr("opacity", 1);
+
+  // Draw each character
+  const charGroups = [];
+  chars.forEach((ch, ci) => {
+    const x = startX + ci * (CHAR_W + CHAR_PAD);
+    const cg = lg.append("g").attr("class", "char-cell")
+      .attr("transform", `translate(${x}, ${rowY})`).attr("opacity", 0);
+
+    cg.append("rect").attr("width", CHAR_W).attr("height", CHAR_H)
+      .attr("rx", 3).attr("fill", COLORS.charBg)
+      .attr("stroke", COLORS.charBorder).attr("stroke-width", 0.5);
+
+    cg.append("text").attr("x", CHAR_W / 2).attr("y", CHAR_H / 2 + 1)
+      .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+      .attr("fill", COLORS.text).attr("font-size", 14)
+      .attr("font-family", FONT_MONO).text(ch);
+
+    cg.transition().delay(ci * 20).duration(300).attr("opacity", 1);
+    charGroups.push(cg);
+  });
+
+  // ---- Phase 2: Slice lines at token boundaries ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer2", "step-slice");
+
+    // Compute token boundary positions (character indices where a new token starts)
+    const boundaries = [];
+    let charIdx = 0;
+    tokens.forEach((tok, ti) => {
+      if (ti > 0) boundaries.push(charIdx);
+      charIdx += tok.length;
+    });
+
+    // Draw slice lines
+    boundaries.forEach((bi, i) => {
+      const x = startX + bi * (CHAR_W + CHAR_PAD) - CHAR_PAD / 2;
+      lg.append("line").attr("class", "slice-line")
+        .attr("x1", x).attr("y1", rowY - 12)
+        .attr("x2", x).attr("y2", rowY - 12)
+        .attr("stroke", COLORS.gold).attr("stroke-width", 2)
+        .attr("opacity", 0)
+        .transition().delay(i * 80).duration(300)
+        .attr("y2", rowY + CHAR_H + 12)
+        .attr("opacity", 1);
+    });
+
+    // Color character backgrounds by token
+    charGroups.forEach((cg, ci) => {
+      const ti = CHAR_TOKEN_MAP[ci];
+      cg.select("rect")
+        .transition().delay(boundaries.length * 80 + 200).duration(400)
+        .attr("fill", TOKEN_COLORS[ti % TOKEN_COLORS.length])
+        .attr("fill-opacity", 0.15)
+        .attr("stroke", TOKEN_COLORS[ti % TOKEN_COLORS.length])
+        .attr("stroke-opacity", 0.5);
+    });
+
+  }, 1200));
+
+  // ---- Phase 3: Separate into token groups with gaps ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer2", "step-separate");
+
+    // Compute new positions with gaps between tokens
+    const GAP = 16;
+    const tokenWidths = tokens.map(t => t.length * (CHAR_W + CHAR_PAD));
+    const totalW = tokenWidths.reduce((a, b) => a + b, 0) + (tokens.length - 1) * GAP;
+    const newStartX = (W - totalW) / 2;
+
+    // Fade out slice lines
+    lg.selectAll(".slice-line")
+      .transition().duration(400).attr("opacity", 0).remove();
+
+    // Move characters to new positions
+    let tokenStartX = newStartX;
+    let charOffset = 0;
+    tokens.forEach((tok, ti) => {
+      for (let tci = 0; tci < tok.length; tci++) {
+        const ci = charOffset + tci;
+        const newX = tokenStartX + tci * (CHAR_W + CHAR_PAD);
+        charGroups[ci]
+          .transition().duration(700).ease(d3.easeCubicInOut)
+          .attr("transform", `translate(${newX}, ${rowY})`);
+      }
+      charOffset += tok.length;
+      tokenStartX += tokenWidths[ti] + GAP;
+    });
+
+    // Draw token group brackets after move
+    timers.push(d3.timeout(() => {
+      let tx = newStartX;
+      tokens.forEach((tok, ti) => {
+        const tw = tok.length * (CHAR_W + CHAR_PAD) - CHAR_PAD;
+        const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+
+        // Token group background
+        lg.append("rect").attr("class", "token-bracket")
+          .attr("x", tx - 4).attr("y", rowY - 6)
+          .attr("width", tw + 8).attr("height", CHAR_H + 12)
+          .attr("rx", 6)
+          .attr("fill", "none")
+          .attr("stroke", color).attr("stroke-width", 1.5)
+          .attr("opacity", 0)
+          .transition().delay(ti * 60).duration(400).attr("opacity", 1);
+
+        // Token label above
+        const label = tok.trim() || "\\s";
+        lg.append("text").attr("class", "token-label")
+          .attr("x", tx + tw / 2).attr("y", rowY - 16)
+          .attr("text-anchor", "middle")
+          .attr("fill", color).attr("font-size", 12)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(`"${label}"`)
+          .transition().delay(ti * 60 + 200).duration(400).attr("opacity", 1);
+
+        tx += tokenWidths[ti] + GAP;
+      });
+    }, 800));
+
+  }, 3200));
+
+  // ---- Phase 4: Token IDs appear ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer2", "step-ids");
+
+    const GAP = 16;
+    const tokenWidths = tokens.map(t => t.length * (CHAR_W + CHAR_PAD));
+    const totalW = tokenWidths.reduce((a, b) => a + b, 0) + (tokens.length - 1) * GAP;
+    const newStartX = (W - totalW) / 2;
+
+    // Arrow from characters down to IDs
+    const arrowY1 = rowY + CHAR_H + 20;
+    const arrowY2 = rowY + CHAR_H + 55;
+
+    lg.append("text")
+      .attr("x", W / 2).attr("y", arrowY1 + 12)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 12)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("encode()")
+      .transition().duration(400).attr("opacity", 0.6);
+
+    // ID boxes
+    let tx = newStartX;
+    tokens.forEach((tok, ti) => {
+      const tw = tok.length * (CHAR_W + CHAR_PAD) - CHAR_PAD;
+      const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+      const idStr = String(tokenIds[ti]);
+
+      // Arrow line
+      const cx = tx + tw / 2;
+      lg.append("line").attr("class", "id-arrow")
+        .attr("x1", cx).attr("y1", arrowY1)
+        .attr("x2", cx).attr("y2", arrowY1)
+        .attr("stroke", color).attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3,3").attr("opacity", 0)
+        .transition().delay(ti * 80).duration(300)
+        .attr("y2", arrowY2).attr("opacity", 0.5);
+
+      // ID box
+      const idBoxW = Math.max(tw, idStr.length * 8 + 12);
+      const idG = lg.append("g").attr("class", "token-id")
+        .attr("transform", `translate(${cx}, ${arrowY2 + 8})`).attr("opacity", 0);
+
+      idG.append("rect")
+        .attr("x", -idBoxW / 2).attr("y", 0)
+        .attr("width", idBoxW).attr("height", 24)
+        .attr("rx", 4).attr("fill", COLORS.cardBg)
+        .attr("stroke", color).attr("stroke-width", 1);
+
+      idG.append("text")
+        .attr("x", 0).attr("y", 13)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", color).attr("font-size", 12)
+        .attr("font-weight", 600)
+        .attr("font-family", FONT_MONO).text(idStr);
+
+      idG.transition().delay(ti * 80 + 200).duration(400).attr("opacity", 1);
+
+      tx += tokenWidths[ti] + GAP;
+    });
+
+  }, 5200));
+
+  // ---- Phase 5: Encoding summary ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 5;
+    setStep("steps-layer2", "step-summary");
+
+    const summaryY = H * 0.72;
+    const summaryG = lg.append("g").attr("class", "encoding-summary")
+      .attr("transform", `translate(${W / 2}, ${summaryY})`).attr("opacity", 0);
+
+    const boxW = 380, boxH = 110;
+
+    summaryG.append("text").attr("x", 0).attr("y", -boxH / 2 - 14)
+      .attr("text-anchor", "middle").attr("fill", COLORS.teal)
+      .attr("font-size", 13).attr("font-family", FONT_MONO)
+      .attr("letter-spacing", 2).text("TOKENIZATION SUMMARY");
+
+    summaryG.append("rect")
+      .attr("x", -boxW / 2).attr("y", -boxH / 2)
+      .attr("width", boxW).attr("height", boxH).attr("rx", 8)
+      .attr("fill", COLORS.cardBg).attr("stroke", COLORS.teal)
+      .attr("stroke-width", 1.5).attr("filter", "url(#glow)");
+
+    const summaryLines = [
+      { key: "encoding", value: LAYER2_DATA.encoding_method, color: COLORS.teal },
+      { key: "tokens", value: String(LAYER2_DATA.num_tokens), color: COLORS.gold },
+      { key: "vocab_size", value: LAYER2_DATA.vocab_size.toLocaleString(), color: COLORS.textDim },
+    ];
+
+    summaryLines.forEach((sl, si) => {
+      const y = -boxH / 2 + 24 + si * 28;
+      summaryG.append("text")
+        .attr("x", -boxW / 2 + 20).attr("y", y)
+        .attr("fill", sl.color).attr("font-size", 13)
+        .attr("font-family", FONT_MONO).text(sl.key + ":");
+      summaryG.append("text")
+        .attr("x", -boxW / 2 + 20 + sl.key.length * 8 + 16).attr("y", y)
+        .attr("fill", COLORS.text).attr("font-size", 13)
+        .attr("font-family", FONT_MONO).text(sl.value);
+    });
+
+    summaryG.transition().duration(600).attr("opacity", 1);
+
+  }, 7000));
+}
+
+// ============================================================
+//  LAYER 3 VISUALIZATION
+// ============================================================
+function playLayer3() {
+  clearViz();
+  currentLayer = 3;
+  layer3Played = true;
+  setLayerIndicator(3);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+
+  const lg = g.append("g").attr("class", "layer3-group");
+  const tokens = LAYER3_DATA.tokens;
+  const tokenIds = LAYER3_DATA.token_ids;
+  const numTokens = tokens.length;
+
+  // ---- Phase 1: Show token IDs in a row (carry-over from Layer 2) ----
+  animationPhase = 1;
+  setStep("steps-layer3", "step-l3-tokens");
+
+  const tokenBoxW = 64;
+  const tokenBoxH = 36;
+  const tokenGap = 12;
+  const totalTokensW = numTokens * tokenBoxW + (numTokens - 1) * tokenGap;
+  const tokensStartX = (W - totalTokensW) / 2;
+  const tokensY = H * 0.12;
+
+  // Label
+  lg.append("text")
+    .attr("x", W / 2).attr("y", tokensY - 20)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 13)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text("token_ids")
+    .transition().duration(500).attr("opacity", 1);
+
+  // Token ID boxes
+  const tokenGroups = [];
+  tokens.forEach((tok, ti) => {
+    const x = tokensStartX + ti * (tokenBoxW + tokenGap);
+    const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+
+    const tg = lg.append("g").attr("class", "l3-token")
+      .attr("transform", `translate(${x}, ${tokensY})`).attr("opacity", 0);
+
+    tg.append("rect")
+      .attr("width", tokenBoxW).attr("height", tokenBoxH)
+      .attr("rx", 4).attr("fill", COLORS.cardBg)
+      .attr("stroke", color).attr("stroke-width", 1);
+
+    tg.append("text")
+      .attr("x", tokenBoxW / 2).attr("y", tokenBoxH / 2 + 1)
+      .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+      .attr("fill", color).attr("font-size", 13).attr("font-weight", 600)
+      .attr("font-family", FONT_MONO).text(tokenIds[ti]);
+
+    // Token label below
+    const label = tok.trim() || "\\s";
+    tg.append("text")
+      .attr("x", tokenBoxW / 2).attr("y", tokenBoxH + 14)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 10)
+      .attr("font-family", FONT_MONO).text(label);
+
+    tg.transition().delay(ti * 50).duration(400).attr("opacity", 1);
+    tokenGroups.push(tg);
+  });
+
+  // ---- Phase 2: Heatmap strips expand from each token ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer3", "step-l3-expand");
+
+    const stripY = tokensY + tokenBoxH + 100;
+    const cellW = 4;
+    const cellH = 20;
+    const numVisibleDims = 60;  // Show 60 of 1536 dims
+    const stripW = numVisibleDims * cellW;
+
+    // "embed()" label
+    lg.append("text")
+      .attr("x", W / 2).attr("y", stripY - 14)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 12)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("embed(token_id) → [1,536 dimensions]")
+      .transition().duration(500).attr("opacity", 0.6);
+
+    // Color scale for heatmap
+    const heatScale = d3.scaleSequential(d3.interpolateRdBu).domain([0.08, -0.08]);
+
+    tokens.forEach((tok, ti) => {
+      const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+      const realVals = LAYER3_DATA.token_vectors[ti];
+
+      // Generate synthetic dimension values seeded from real data
+      const seed = tokenIds[ti];
+      const dimVals = [];
+      for (let d = 0; d < numVisibleDims; d++) {
+        // Use a deterministic pseudo-random based on seed and dimension
+        const v = realVals[d % realVals.length] +
+          Math.sin(seed * 0.1 + d * 0.7) * 0.04 +
+          Math.cos(seed * 0.3 + d * 1.1) * 0.03;
+        dimVals.push(v);
+      }
+
+      // Strip group
+      const stripX = (W - stripW) / 2;
+      const sy = stripY + ti * (cellH + 6);
+
+      // Token label on the left
+      const label = tok.trim() || "\\s";
+      lg.append("text")
+        .attr("x", stripX - 10).attr("y", sy + cellH / 2 + 1)
+        .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+        .attr("fill", color).attr("font-size", 11)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text(label)
+        .transition().delay(ti * 100).duration(400).attr("opacity", 1);
+
+      // Draw cells
+      dimVals.forEach((v, di) => {
+        lg.append("rect").attr("class", "heatmap-cell")
+          .attr("x", stripX + di * cellW)
+          .attr("y", sy)
+          .attr("width", cellW - 0.5)
+          .attr("height", cellH)
+          .attr("fill", heatScale(v))
+          .attr("opacity", 0)
+          .transition()
+          .delay(ti * 100 + di * 5)
+          .duration(200)
+          .attr("opacity", 1);
+      });
+
+      // "..." indicator at the end
+      lg.append("text")
+        .attr("x", stripX + stripW + 8).attr("y", sy + cellH / 2 + 1)
+        .attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 11)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("... ×1,536")
+        .transition().delay(ti * 100 + numVisibleDims * 5).duration(400).attr("opacity", 0.5);
+
+      // Arrow from token box down to strip
+      const tokenCx = tokensStartX + ti * (tokenBoxW + tokenGap) + tokenBoxW / 2;
+      const stripCx = stripX + stripW / 2;
+      lg.append("line")
+        .attr("x1", tokenCx).attr("y1", tokensY + tokenBoxH + 26)
+        .attr("x2", tokenCx).attr("y2", tokensY + tokenBoxH + 26)
+        .attr("stroke", color).attr("stroke-width", 0.8)
+        .attr("stroke-dasharray", "3,3").attr("opacity", 0)
+        .transition().delay(ti * 100).duration(300)
+        .attr("x2", stripCx).attr("y2", sy - 2)
+        .attr("opacity", 0.3);
+    });
+
+  }, 1400));
+
+  // ---- Phase 3: Matrix label ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer3", "step-l3-matrix");
+
+    const cellH = 20;
+    const stripY = tokensY + tokenBoxH + 100;
+    const matrixH = numTokens * (cellH + 6);
+    const numVisibleDims = 60;
+    const cellW = 4;
+    const stripW = numVisibleDims * cellW;
+    const stripX = (W - stripW) / 2;
+
+    // Matrix bracket left (clear of token labels)
+    const lbx = stripX - 60;
+    lg.append("path")
+      .attr("d", `M ${lbx + 8} ${stripY - 8} L ${lbx} ${stripY - 8} L ${lbx} ${stripY + matrixH + 2} L ${lbx + 8} ${stripY + matrixH + 2}`)
+      .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
+      .attr("fill", "none").attr("opacity", 0)
+      .transition().duration(500).attr("opacity", 1);
+
+    // Matrix bracket right (clear of "... ×1,536" text)
+    const rx = stripX + stripW + 90;
+    lg.append("path")
+      .attr("d", `M ${rx} ${stripY - 8} L ${rx + 8} ${stripY - 8} L ${rx + 8} ${stripY + matrixH + 2} L ${rx} ${stripY + matrixH + 2}`)
+      .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
+      .attr("fill", "none").attr("opacity", 0)
+      .transition().duration(500).attr("opacity", 1);
+
+    // Shape label
+    lg.append("text")
+      .attr("x", W / 2).attr("y", stripY + matrixH + 20)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.teal).attr("font-size", 13)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text(`shape: [${numTokens} tokens × ${LAYER3_DATA.embedding_dim} dimensions]`)
+      .transition().delay(200).duration(500).attr("opacity", 1);
+
+  }, 5000));
+
+  // ---- Phase 4: 2D scatter plot ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer3", "step-l3-space");
+
+    // Fade out the heatmap and matrix elements
+    lg.selectAll(".heatmap-cell").transition().duration(600).attr("opacity", 0).remove();
+    lg.selectAll(".l3-token").transition().duration(600).attr("opacity", 0);
+
+    // Fade out other elements above the scatter area
+    lg.selectAll("text, line, path").transition().duration(600).attr("opacity", 0);
+
+    timers.push(d3.timeout(() => {
+      // Clear everything and draw scatter plot fresh
+      lg.selectAll("*").remove();
+
+      const margin = { top: 60, right: 60, bottom: 60, left: 60 };
+      const plotW = W - margin.left - margin.right;
+      const plotH = H - margin.top - margin.bottom;
+      const plotG = lg.append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+      // Title
+      plotG.append("text")
+        .attr("x", plotW / 2).attr("y", -30)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.teal).attr("font-size", 14)
+        .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+        .attr("opacity", 0)
+        .text("EMBEDDING SPACE (2D PROJECTION)")
+        .transition().duration(500).attr("opacity", 1);
+
+      // Scales
+      const proj = LAYER3_DATA.projection_2d;
+      const xExtent = d3.extent(proj, d => d.x);
+      const yExtent = d3.extent(proj, d => d.y);
+      const pad = 0.015;
+
+      const xScale = d3.scaleLinear()
+        .domain([xExtent[0] - pad, xExtent[1] + pad])
+        .range([0, plotW]);
+
+      const yScale = d3.scaleLinear()
+        .domain([yExtent[0] - pad, yExtent[1] + pad])
+        .range([plotH, 0]);
+
+      // Axis lines (subtle)
+      plotG.append("line")
+        .attr("x1", 0).attr("y1", plotH / 2)
+        .attr("x2", plotW).attr("y2", plotH / 2)
+        .attr("stroke", COLORS.border).attr("stroke-width", 0.5)
+        .attr("opacity", 0).transition().duration(500).attr("opacity", 0.5);
+
+      plotG.append("line")
+        .attr("x1", plotW / 2).attr("y1", 0)
+        .attr("x2", plotW / 2).attr("y2", plotH)
+        .attr("stroke", COLORS.border).attr("stroke-width", 0.5)
+        .attr("opacity", 0).transition().duration(500).attr("opacity", 0.5);
+
+      // Plot border
+      plotG.append("rect")
+        .attr("width", plotW).attr("height", plotH)
+        .attr("fill", "none").attr("stroke", COLORS.border)
+        .attr("stroke-width", 0.5).attr("rx", 4)
+        .attr("opacity", 0).transition().duration(500).attr("opacity", 0.5);
+
+      // Draw connecting lines between semantically related tokens
+      // (trip-Tokyo, Plan-day, a-to as function words)
+      const connections = [
+        [5, 7, 0.15],  // trip - Tokyo
+        [0, 4, 0.10],  // Plan - -day
+        [1, 6, 0.10],  // a - to
+      ];
+
+      connections.forEach(([i, j, op]) => {
+        plotG.append("line")
+          .attr("x1", xScale(proj[i].x)).attr("y1", yScale(proj[i].y))
+          .attr("x2", xScale(proj[i].x)).attr("y2", yScale(proj[i].y))
+          .attr("stroke", COLORS.border).attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4,4").attr("opacity", 0)
+          .transition().delay(800).duration(600)
+          .attr("x2", xScale(proj[j].x)).attr("y2", yScale(proj[j].y))
+          .attr("opacity", op);
+      });
+
+      // Plot tokens as dots with labels
+      tokens.forEach((tok, ti) => {
+        const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+        const cx = xScale(proj[ti].x);
+        const cy = yScale(proj[ti].y);
+        const label = tok.trim() || "\\s";
+
+        // Start from center, animate to position
+        const dotG = plotG.append("g")
+          .attr("transform", `translate(${plotW / 2}, ${plotH / 2})`)
+          .attr("opacity", 0);
+
+        // Glow circle (larger, faint)
+        dotG.append("circle")
+          .attr("r", 20)
+          .attr("fill", color).attr("opacity", 0.08);
+
+        // Main dot
+        dotG.append("circle")
+          .attr("r", 8)
+          .attr("fill", color).attr("opacity", 0.9)
+          .attr("filter", "url(#glow)");
+
+        // Inner dot
+        dotG.append("circle")
+          .attr("r", 3)
+          .attr("fill", COLORS.text);
+
+        // Label
+        const labelOffsetX = (cx > plotW / 2) ? 16 : -16;
+        const anchor = (cx > plotW / 2) ? "start" : "end";
+        dotG.append("text")
+          .attr("x", labelOffsetX).attr("y", -14)
+          .attr("text-anchor", anchor)
+          .attr("fill", color).attr("font-size", 13).attr("font-weight", 600)
+          .attr("font-family", FONT_MONO).text(label);
+
+        // Token ID small
+        dotG.append("text")
+          .attr("x", labelOffsetX).attr("y", 0)
+          .attr("text-anchor", anchor)
+          .attr("fill", COLORS.textDim).attr("font-size", 10)
+          .attr("font-family", FONT_MONO).text(tokenIds[ti]);
+
+        // Animate to position
+        dotG.transition().delay(ti * 100 + 300).duration(1000)
+          .ease(d3.easeCubicOut)
+          .attr("transform", `translate(${cx}, ${cy})`)
+          .attr("opacity", 1);
+      });
+
+      // Explanation text at bottom
+      plotG.append("text")
+        .attr("x", plotW / 2).attr("y", plotH + 35)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 12)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("Closer points = more similar meaning")
+        .transition().delay(1500).duration(500).attr("opacity", 0.6);
+
+    }, 700));
+
+  }, 7500));
+}
+
+// ============================================================
+//  LAYER 4 VISUALIZATION
+// ============================================================
+function playLayer4() {
+  clearViz();
+  currentLayer = 4;
+  layer4Played = true;
+  setLayerIndicator(4);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+  clearSteps("steps-layer3");
+
+  const lg = g.append("g").attr("class", "layer4-group");
+  const docs = LAYER4_DATA.all_docs;
+  const numDocs = docs.length;
+
+  // Center of the radial layout
+  const cx = W / 2;
+  const cy = H / 2;
+  const maxRadius = Math.min(W, H) * 0.38;
+
+  // Category colors
+  const CAT_COLORS = {
+    user_metadata: "#ffd700",
+    travel_history: "#e06c75",
+    user_preferences: "#61afef",
+    user_interests: "#98c379",
+    communication_style: "#c678dd",
+    user_background: "#d19a66",
+    query_history: "#56b6c2",
+  };
+
+  // ---- Phase 1: Query node appears at center ----
+  animationPhase = 1;
+  setStep("steps-layer4", "step-l4-query");
+
+  // Pulsing glow behind query
+  const queryGlow = lg.append("circle")
+    .attr("cx", cx).attr("cy", cy)
+    .attr("r", 0).attr("fill", COLORS.teal).attr("opacity", 0);
+
+  queryGlow.transition().duration(800).attr("r", 40).attr("opacity", 0.08);
+
+  function pulseGlow() {
+    if (currentLayer !== 4) return;
+    queryGlow.transition().duration(1500).attr("r", 50).attr("opacity", 0.04)
+      .transition().duration(1500).attr("r", 40).attr("opacity", 0.08)
+      .on("end", pulseGlow);
+  }
+  timers.push(d3.timeout(pulseGlow, 800));
+
+  // Query node
+  const queryG = lg.append("g")
+    .attr("transform", `translate(${cx}, ${cy})`).attr("opacity", 0);
+
+  queryG.append("circle").attr("r", 24)
+    .attr("fill", COLORS.cardBg).attr("stroke", COLORS.teal)
+    .attr("stroke-width", 2).attr("filter", "url(#glow)");
+
+  queryG.append("text").attr("y", 1)
+    .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+    .attr("fill", COLORS.teal).attr("font-size", 11).attr("font-weight", 700)
+    .attr("font-family", FONT_MONO).text("Q");
+
+  // Query label
+  queryG.append("text").attr("y", -38)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.teal).attr("font-size", 12)
+    .attr("font-family", FONT_MONO).attr("letter-spacing", 1)
+    .text("QUERY EMBEDDING");
+
+  queryG.transition().duration(600).attr("opacity", 1);
+
+  // ---- Phase 2: Document nodes appear radially ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer4", "step-l4-docs");
+
+    // Position documents in a radial layout — distance inversely proportional to similarity
+    const maxSim = d3.max(docs, d => d.similarity);
+    const minSim = d3.min(docs, d => d.similarity);
+    const radiusScale = d3.scaleLinear()
+      .domain([maxSim, minSim])
+      .range([maxRadius * 0.5, maxRadius]);
+
+    const docNodes = [];
+    docs.forEach((doc, di) => {
+      const angle = (di / numDocs) * 2 * Math.PI - Math.PI / 2;
+      const r = radiusScale(doc.similarity);
+      const dx = cx + Math.cos(angle) * r;
+      const dy = cy + Math.sin(angle) * r;
+
+      const catColor = CAT_COLORS[doc.category] || COLORS.textDim;
+
+      const dg = lg.append("g").attr("class", "doc-node")
+        .attr("transform", `translate(${cx}, ${cy})`).attr("opacity", 0);
+
+      // Doc circle
+      dg.append("circle").attr("r", 14)
+        .attr("fill", COLORS.cardBg)
+        .attr("stroke", catColor).attr("stroke-width", 1.5);
+
+      // Doc label (ID)
+      dg.append("text").attr("y", 1)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", catColor).attr("font-size", 8).attr("font-weight", 600)
+        .attr("font-family", FONT_MONO)
+        .text(doc.id.replace("doc_", ""));
+
+      // Category label outside
+      const labelAngle = angle;
+      const labelR = 22;
+      const lx = Math.cos(labelAngle) * labelR;
+      const ly = Math.sin(labelAngle) * labelR;
+      const anchor = Math.cos(labelAngle) > 0.1 ? "start" : Math.cos(labelAngle) < -0.1 ? "end" : "middle";
+
+      dg.append("text")
+        .attr("x", lx).attr("y", ly)
+        .attr("text-anchor", anchor).attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 9)
+        .attr("font-family", FONT_MONO)
+        .text(doc.category.replace(/_/g, " "));
+
+      // Animate to position
+      dg.transition().delay(di * 80).duration(700).ease(d3.easeCubicOut)
+        .attr("transform", `translate(${dx}, ${dy})`)
+        .attr("opacity", 1);
+
+      docNodes.push({ dg, dx, dy, doc, catColor, angle });
+    });
+
+    // Store for later phases
+    lg.property("__docNodes", docNodes);
+    lg.property("__radiusScale", radiusScale);
+  }, 1400));
+
+  // ---- Phase 3: Connection lines with similarity scores ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer4", "step-l4-compare");
+
+    const docNodes = lg.property("__docNodes");
+
+    // "cosine_similarity()" label
+    lg.append("text").attr("class", "method-label")
+      .attr("x", cx).attr("y", cy + 52)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 11)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("cosine_similarity(query, doc)")
+      .transition().duration(400).attr("opacity", 0.5);
+
+    docNodes.forEach(({ dx, dy, doc, catColor }, di) => {
+      // Connection line
+      const lineOpacity = 0.15 + doc.similarity * 0.6;
+      const lineWidth = 0.5 + doc.similarity * 3;
+
+      lg.append("line").attr("class", "sim-line")
+        .attr("x1", cx).attr("y1", cy)
+        .attr("x2", cx).attr("y2", cy)
+        .attr("stroke", catColor).attr("stroke-width", lineWidth)
+        .attr("opacity", 0)
+        .transition().delay(di * 60).duration(500)
+        .attr("x2", dx).attr("y2", dy)
+        .attr("opacity", lineOpacity);
+
+      // Similarity score along the line (60% from center toward doc)
+      const t = 0.6;
+      const mx = cx + (dx - cx) * t;
+      const my = cy + (dy - cy) * t;
+
+      lg.append("text").attr("class", "sim-score")
+        .attr("x", mx).attr("y", my)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", doc.retrieved ? COLORS.text : COLORS.textDim)
+        .attr("font-size", 11).attr("font-weight", doc.retrieved ? 700 : 400)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text(doc.similarity.toFixed(4))
+        .transition().delay(di * 60 + 400).duration(400).attr("opacity", doc.retrieved ? 0.9 : 0.4);
+    });
+
+  }, 3600));
+
+  // ---- Phase 4: Top 5 retrieved, others fade ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer4", "step-l4-retrieve");
+
+    const docNodes = lg.property("__docNodes");
+
+    // Fade out non-retrieved elements
+    lg.selectAll(".sim-line").each(function(d, i) {
+      if (i >= 5) {
+        d3.select(this).transition().duration(600).attr("opacity", 0.04);
+      }
+    });
+    lg.selectAll(".sim-score").each(function(d, i) {
+      if (i >= 5) {
+        d3.select(this).transition().duration(600).attr("opacity", 0.1);
+      }
+    });
+
+    // Fade non-retrieved doc nodes
+    docNodes.forEach(({ dg, doc }, di) => {
+      if (!doc.retrieved) {
+        dg.transition().duration(600).attr("opacity", 0.2);
+      } else {
+        // Highlight retrieved docs
+        dg.select("circle")
+          .transition().duration(600)
+          .attr("r", 18)
+          .attr("stroke-width", 2.5)
+          .attr("filter", "url(#glow)");
+      }
+    });
+
+    // Clear previous viz elements for clean results display
+    timers.push(d3.timeout(() => {
+      // Fade out everything
+      lg.selectAll("*").transition().duration(600).attr("opacity", 0);
+
+      timers.push(d3.timeout(() => {
+        lg.selectAll("*").remove();
+
+        // Draw the clean results panel
+        const resultG = lg.append("g")
+          .attr("transform", `translate(${W / 2}, 0)`);
+
+        // Title
+        resultG.append("text")
+          .attr("x", 0).attr("y", 40)
+          .attr("text-anchor", "middle")
+          .attr("fill", COLORS.teal).attr("font-size", 13)
+          .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+          .attr("opacity", 0)
+          .text("RETRIEVED DOCUMENTS (TOP 5)")
+          .transition().duration(500).attr("opacity", 1);
+
+        // Search info
+        resultG.append("text")
+          .attr("x", 0).attr("y", 62)
+          .attr("text-anchor", "middle")
+          .attr("fill", COLORS.textDim).attr("font-size", 11)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(`method: cosine_similarity | searched: ${LAYER4_DATA.total_docs} docs | top_k: ${LAYER4_DATA.top_k}`)
+          .transition().delay(200).duration(500).attr("opacity", 0.5);
+
+        // Result cards
+        const cardW = W * 0.72;
+        const cardH = 68;
+        const cardGap = 10;
+        const startY = 90;
+
+        const retrieved = docs.filter(d => d.retrieved);
+        retrieved.forEach((doc, ri) => {
+          const catColor = CAT_COLORS[doc.category] || COLORS.textDim;
+          const y = startY + ri * (cardH + cardGap);
+
+          const card = resultG.append("g")
+            .attr("transform", `translate(0, ${y})`).attr("opacity", 0);
+
+          // Background
+          card.append("rect")
+            .attr("x", -cardW / 2).attr("y", 0)
+            .attr("width", cardW).attr("height", cardH)
+            .attr("rx", 6).attr("fill", COLORS.cardBg)
+            .attr("stroke", catColor).attr("stroke-width", 1);
+
+          // Similarity bar (visual indicator)
+          const barMaxW = cardW - 20;
+          const barW = barMaxW * (doc.similarity / 0.5);  // scale to max plausible similarity
+
+          card.append("rect")
+            .attr("x", -cardW / 2 + 10).attr("y", cardH - 8)
+            .attr("width", 0).attr("height", 3)
+            .attr("rx", 1.5).attr("fill", catColor).attr("opacity", 0.3)
+            .transition().delay(ri * 100 + 300).duration(600)
+            .attr("width", barW);
+
+          // Rank number
+          card.append("text")
+            .attr("x", -cardW / 2 + 16).attr("y", 22)
+            .attr("fill", catColor).attr("font-size", 16).attr("font-weight", 700)
+            .attr("font-family", FONT_MONO)
+            .text(`#${ri + 1}`);
+
+          // Similarity score
+          card.append("text")
+            .attr("x", cardW / 2 - 16).attr("y", 22)
+            .attr("text-anchor", "end")
+            .attr("fill", COLORS.text).attr("font-size", 15).attr("font-weight", 700)
+            .attr("font-family", FONT_MONO)
+            .text(doc.similarity.toFixed(4));
+
+          // Category
+          card.append("text")
+            .attr("x", -cardW / 2 + 56).attr("y", 22)
+            .attr("fill", catColor).attr("font-size", 11)
+            .attr("font-family", FONT_MONO)
+            .text(doc.category.replace(/_/g, " "));
+
+          // Snippet
+          const maxSnipLen = Math.floor((cardW - 80) / 6.5);
+          const snip = doc.snippet.length > maxSnipLen ? doc.snippet.slice(0, maxSnipLen) + "..." : doc.snippet;
+          card.append("text")
+            .attr("x", -cardW / 2 + 16).attr("y", 46)
+            .attr("fill", COLORS.textDim).attr("font-size", 11)
+            .attr("font-family", FONT_MONO)
+            .text(`"${snip}"`);
+
+          card.transition().delay(ri * 100).duration(500).attr("opacity", 1);
+        });
+
+        // Threshold line / note
+        resultG.append("text")
+          .attr("x", 0).attr("y", startY + 5 * (cardH + cardGap) + 20)
+          .attr("text-anchor", "middle")
+          .attr("fill", COLORS.textDim).attr("font-size", 11)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text("5 remaining documents below relevance threshold")
+          .transition().delay(600).duration(500).attr("opacity", 0.4);
+
+      }, 700));
+    }, 2000));
+
+  }, 6000));
+}
+
+// ============================================================
+//  LAYER 5 VISUALIZATION
+// ============================================================
+function playLayer5() {
+  clearViz();
+  currentLayer = 5;
+  layer5Played = true;
+  setLayerIndicator(5);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+  clearSteps("steps-layer3");
+  clearSteps("steps-layer4");
+
+  const lg = g.append("g").attr("class", "layer5-group");
+  const ctx = LAYER5_DATA.retrieved_context;
+
+  // Layout constants
+  const centerX = W / 2;
+  const inputY = H * 0.12;
+  const contextY = H * 0.30;
+  const structureY = H * 0.58;
+
+  // Source colors (matching Layer 4 category colors)
+  const SRC_COLORS = {
+    user_metadata: "#ffd700",
+    travel_history: "#e06c75",
+    user_preferences: "#61afef",
+    user_interests: "#98c379",
+  };
+
+  // ---- Phase 1: Original user input ----
+  animationPhase = 1;
+  setStep("steps-layer5", "step-l5-input");
+
+  // "user_input" label
+  lg.append("text")
+    .attr("x", centerX).attr("y", inputY - 20)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 12)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text("user_input")
+    .transition().duration(500).attr("opacity", 0.6);
+
+  // Input box
+  const inputBoxW = 340;
+  const inputBoxH = 38;
+  const inputG = lg.append("g")
+    .attr("transform", `translate(${centerX}, ${inputY})`).attr("opacity", 0);
+
+  inputG.append("rect")
+    .attr("x", -inputBoxW / 2).attr("y", 0)
+    .attr("width", inputBoxW).attr("height", inputBoxH)
+    .attr("rx", 6).attr("fill", COLORS.cardBg)
+    .attr("stroke", COLORS.teal).attr("stroke-width", 1.5);
+
+  inputG.append("text")
+    .attr("x", 0).attr("y", inputBoxH / 2 + 1)
+    .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+    .attr("fill", COLORS.text).attr("font-size", 13)
+    .attr("font-family", FONT_MONO)
+    .text(`"${LAYER5_DATA.user_input}"`);
+
+  inputG.transition().duration(600).attr("opacity", 1);
+
+  // ---- Phase 2: Retrieved context fragments slide in ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer5", "step-l5-context");
+
+    // Label
+    lg.append("text")
+      .attr("x", centerX).attr("y", contextY - 16)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 12)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("retrieved_context[]")
+      .transition().duration(500).attr("opacity", 0.6);
+
+    const ctxBoxW = W * 0.80;
+    const ctxBoxH = 30;
+    const ctxGap = 6;
+
+    ctx.forEach((c, ci) => {
+      const srcColor = SRC_COLORS[c.source] || COLORS.textDim;
+      const y = contextY + ci * (ctxBoxH + ctxGap);
+      // Alternate sides for slide-in
+      const startX = ci % 2 === 0 ? -ctxBoxW : W + ctxBoxW;
+
+      const cg = lg.append("g").attr("class", "ctx-fragment")
+        .attr("transform", `translate(${startX}, ${y})`).attr("opacity", 0);
+
+      cg.append("rect")
+        .attr("x", centerX - ctxBoxW / 2).attr("y", 0)
+        .attr("width", ctxBoxW).attr("height", ctxBoxH)
+        .attr("rx", 4).attr("fill", COLORS.cardBg)
+        .attr("stroke", srcColor).attr("stroke-width", 1).attr("stroke-opacity", 0.6);
+
+      // Source tag
+      cg.append("rect")
+        .attr("x", centerX - ctxBoxW / 2 + 6).attr("y", 5)
+        .attr("width", c.source.length * 7 + 12).attr("height", 20)
+        .attr("rx", 3).attr("fill", srcColor).attr("fill-opacity", 0.15);
+
+      cg.append("text")
+        .attr("x", centerX - ctxBoxW / 2 + 12).attr("y", ctxBoxH / 2 + 1)
+        .attr("dominant-baseline", "middle")
+        .attr("fill", srcColor).attr("font-size", 10).attr("font-weight", 600)
+        .attr("font-family", FONT_MONO)
+        .text(c.source);
+
+      // Snippet text
+      const textX = centerX - ctxBoxW / 2 + c.source.length * 7 + 26;
+      const maxLen = Math.floor((ctxBoxW - c.source.length * 7 - 40) / 6.2);
+      const snip = c.text.length > maxLen ? c.text.slice(0, maxLen) + "..." : c.text;
+      cg.append("text")
+        .attr("x", textX).attr("y", ctxBoxH / 2 + 1)
+        .attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 10)
+        .attr("font-family", FONT_MONO)
+        .text(snip);
+
+      // Slide in to center
+      cg.transition().delay(ci * 120).duration(600).ease(d3.easeCubicOut)
+        .attr("transform", `translate(0, ${y})`)
+        .attr("opacity", 1);
+    });
+
+    // Arrow from input down to context
+    const arrowG = lg.append("g").attr("opacity", 0);
+    arrowG.append("line")
+      .attr("x1", centerX).attr("y1", inputY + inputBoxH + 4)
+      .attr("x2", centerX).attr("y2", contextY - 22)
+      .attr("stroke", COLORS.teal).attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,4").attr("opacity", 0.4);
+    arrowG.append("polygon")
+      .attr("points", `${centerX},${contextY - 22} ${centerX - 4},${contextY - 30} ${centerX + 4},${contextY - 30}`)
+      .attr("fill", COLORS.teal).attr("opacity", 0.4);
+    arrowG.transition().delay(200).duration(500).attr("opacity", 1);
+
+  }, 1400));
+
+  // ---- Phase 3: MCP structure assembles ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer5", "step-l5-structure");
+
+    // Label
+    lg.append("text")
+      .attr("x", centerX).attr("y", structureY - 18)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.teal).attr("font-size", 12)
+      .attr("font-family", FONT_MONO).attr("letter-spacing", 1).attr("opacity", 0)
+      .text("MODEL CONTEXT PROTOCOL")
+      .transition().duration(500).attr("opacity", 0.8);
+
+    // MCP structure nodes in a horizontal flow
+    const nodes = LAYER5_DATA.context_graph;
+    const nodeW = 130;
+    const nodeH = 34;
+    const nodeGap = 24;
+    const totalNodesW = nodes.length * nodeW + (nodes.length - 1) * nodeGap;
+    const nodesStartX = centerX - totalNodesW / 2;
+
+    // Arrow from context area down to structure
+    const ctxBoxH = 30, ctxGap = 6;
+    const ctxBottomY = contextY + ctx.length * (ctxBoxH + ctxGap);
+    lg.append("line")
+      .attr("x1", centerX).attr("y1", ctxBottomY)
+      .attr("x2", centerX).attr("y2", structureY - 4)
+      .attr("stroke", COLORS.teal).attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,4").attr("opacity", 0)
+      .transition().duration(400).attr("opacity", 0.3);
+
+    const nodeColors = {
+      user_metadata: "#ffd700",
+      travel_history: "#e06c75",
+      user_preferences: "#61afef",
+      response_generation: COLORS.teal,
+    };
+
+    nodes.forEach((node, ni) => {
+      const x = nodesStartX + ni * (nodeW + nodeGap);
+      const nColor = nodeColors[node] || COLORS.textDim;
+
+      const ng = lg.append("g")
+        .attr("transform", `translate(${x + nodeW / 2}, ${structureY})`).attr("opacity", 0);
+
+      ng.append("rect")
+        .attr("x", -nodeW / 2).attr("y", 0)
+        .attr("width", nodeW).attr("height", nodeH)
+        .attr("rx", 6).attr("fill", COLORS.cardBg)
+        .attr("stroke", nColor).attr("stroke-width", 1.5);
+
+      ng.append("text")
+        .attr("y", nodeH / 2 + 1)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", nColor).attr("font-size", 10).attr("font-weight", 600)
+        .attr("font-family", FONT_MONO)
+        .text(node.replace(/_/g, " "));
+
+      ng.transition().delay(ni * 120).duration(500).attr("opacity", 1);
+
+      // Arrow between nodes
+      if (ni < nodes.length - 1) {
+        const arrowX = x + nodeW + nodeGap / 2;
+        lg.append("text")
+          .attr("x", arrowX).attr("y", structureY + nodeH / 2 + 1)
+          .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+          .attr("fill", COLORS.textDim).attr("font-size", 14).attr("opacity", 0)
+          .text("\u2192")
+          .transition().delay(ni * 120 + 200).duration(300).attr("opacity", 0.5);
+      }
+    });
+
+    // Data flow particles along the chain
+    timers.push(d3.timeout(() => {
+      function flowParticle() {
+        if (currentLayer !== 5 || animationPhase < 3) return;
+        const startX = nodesStartX + nodeW / 2;
+        const endX = nodesStartX + (nodes.length - 1) * (nodeW + nodeGap) + nodeW / 2;
+
+        lg.append("circle")
+          .attr("cx", startX).attr("cy", structureY + nodeH / 2)
+          .attr("r", 3).attr("fill", COLORS.teal).attr("filter", "url(#glow)")
+          .transition().duration(2000).ease(d3.easeLinear)
+          .attr("cx", endX)
+          .attr("opacity", 0).remove()
+          .on("end", () => timers.push(d3.timeout(flowParticle, 600)));
+      }
+      flowParticle();
+    }, 600));
+
+  }, 4000));
+
+  // ---- Phase 4: Enriched prompt assembled ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer5", "step-l5-enriched");
+
+    // Fade out existing elements
+    lg.selectAll("*").transition().duration(600).attr("opacity", 0);
+
+    timers.push(d3.timeout(() => {
+      lg.selectAll("*").remove();
+
+      // Draw enriched prompt as a structured JSON-like view
+      const boxW = W * 0.78;
+      const lineH = 22;
+      const lines = [
+        { text: "{", indent: 0, color: COLORS.textDim },
+        { text: '"user_input":', indent: 1, color: COLORS.teal, value: ` "${LAYER5_DATA.user_input}"`, vc: COLORS.text },
+        { text: '"system_state":', indent: 1, color: "#c678dd", value: ` "${LAYER5_DATA.system_state}"`, vc: COLORS.textDim },
+        { text: '"memory": [', indent: 1, color: "#ffd700" },
+      ];
+
+      // Add context lines
+      ctx.forEach((c, ci) => {
+        const srcColor = SRC_COLORS[c.source] || COLORS.textDim;
+        const maxLen = Math.floor((boxW - 120) / 6.5);
+        const snip = c.text.length > maxLen ? c.text.slice(0, maxLen) + "..." : c.text;
+        lines.push({
+          text: `"${snip}"${ci < ctx.length - 1 ? "," : ""}`,
+          indent: 2, color: srcColor
+        });
+      });
+
+      lines.push({ text: "],", indent: 1, color: "#ffd700" });
+      lines.push({ text: '"tool_use":', indent: 1, color: COLORS.textDim, value: " null", vc: COLORS.textDim });
+      lines.push({ text: "}", indent: 0, color: COLORS.textDim });
+
+      const totalH = lines.length * lineH + 30;
+      const startY = (H - totalH) / 2;
+
+      // Title
+      lg.append("text")
+        .attr("x", centerX).attr("y", startY - 18)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.teal).attr("font-size", 13)
+        .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+        .attr("opacity", 0)
+        .text("ENRICHED PROMPT")
+        .transition().duration(500).attr("opacity", 1);
+
+      // Box
+      lg.append("rect")
+        .attr("x", centerX - boxW / 2).attr("y", startY)
+        .attr("width", boxW).attr("height", totalH)
+        .attr("rx", 8).attr("fill", COLORS.cardBg)
+        .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
+        .attr("filter", "url(#glow)")
+        .attr("opacity", 0)
+        .transition().duration(500).attr("opacity", 1);
+
+      // Lines
+      lines.forEach((ln, li) => {
+        const lnG = lg.append("g")
+          .attr("transform", `translate(${centerX - boxW / 2 + 16 + ln.indent * 18}, ${startY + 20 + li * lineH})`)
+          .attr("opacity", 0);
+
+        lnG.append("text")
+          .attr("fill", ln.color).attr("font-size", 11)
+          .attr("font-family", FONT_MONO).text(ln.text);
+
+        if (ln.value) {
+          lnG.append("text")
+            .attr("x", ln.text.length * 6.6 + 4)
+            .attr("fill", ln.vc).attr("font-size", 11)
+            .attr("font-family", FONT_MONO).text(ln.value);
+        }
+
+        lnG.transition().delay(li * 60).duration(400).attr("opacity", 1);
+      });
+
+      // "assemble_prompt(context)" note at bottom
+      lg.append("text")
+        .attr("x", centerX).attr("y", startY + totalH + 22)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 11)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("enriched_prompt = assemble_prompt(context)")
+        .transition().delay(lines.length * 60).duration(500).attr("opacity", 0.5);
+
+    }, 700));
+
+  }, 7000));
+}
+
+// ============================================================
+//  LAYER 6 VISUALIZATION
+// ============================================================
+function playLayer6() {
+  clearViz();
+  currentLayer = 6;
+  layer6Played = true;
+  setLayerIndicator(6);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+  clearSteps("steps-layer3");
+  clearSteps("steps-layer4");
+  clearSteps("steps-layer5");
+
+  const lg = g.append("g").attr("class", "layer6-group");
+  const steps = LAYER6_DATA.steps;
+  const numSteps = steps.length;
+
+  const centerX = W / 2;
+
+  // Step colors — a gradient from teal to gold
+  const STEP_COLORS = ["#4ec9b0", "#61afef", "#c678dd", "#d19a66", "#ffd700"];
+
+  // ---- Phase 1: Enriched prompt input ----
+  animationPhase = 1;
+  setStep("steps-layer6", "step-l6-input");
+
+  const inputY = H * 0.06;
+  const inputBoxW = 280;
+  const inputBoxH = 34;
+
+  const inputG = lg.append("g")
+    .attr("transform", `translate(${centerX}, ${inputY})`).attr("opacity", 0);
+
+  inputG.append("rect")
+    .attr("x", -inputBoxW / 2).attr("y", 0)
+    .attr("width", inputBoxW).attr("height", inputBoxH)
+    .attr("rx", 6).attr("fill", COLORS.cardBg)
+    .attr("stroke", COLORS.teal).attr("stroke-width", 1.5);
+
+  inputG.append("text")
+    .attr("y", inputBoxH / 2 + 1)
+    .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+    .attr("fill", COLORS.teal).attr("font-size", 11)
+    .attr("font-family", FONT_MONO)
+    .text("enriched_prompt");
+
+  inputG.transition().duration(600).attr("opacity", 1);
+
+  // ---- Phase 2: Chain definition appears ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer6", "step-l6-chain");
+
+    // Orchestrator badge
+    const badgeY = inputY + inputBoxH + 34;
+    lg.append("text")
+      .attr("x", centerX).attr("y", badgeY)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 11)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text(`${LAYER6_DATA.orchestrator} · ${LAYER6_DATA.chain_type}`)
+      .transition().duration(500).attr("opacity", 0.5);
+
+    // Arrow from input to first step
+    const chainStartY = badgeY + 18;
+    const nodeH = 56;
+    const nodeW = W * 0.62;
+    const nodeGap = 16;
+    const firstNodeY = chainStartY + 20;
+
+    lg.append("line")
+      .attr("x1", centerX).attr("y1", inputY + inputBoxH)
+      .attr("x2", centerX).attr("y2", firstNodeY)
+      .attr("stroke", COLORS.teal).attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,4").attr("opacity", 0)
+      .transition().delay(200).duration(400).attr("opacity", 0.3);
+
+    // Draw all step nodes
+    steps.forEach((step, si) => {
+      const y = firstNodeY + si * (nodeH + nodeGap);
+      const color = STEP_COLORS[si % STEP_COLORS.length];
+
+      const sg = lg.append("g").attr("class", "chain-step")
+        .attr("transform", `translate(${centerX}, ${y})`).attr("opacity", 0);
+
+      // Step box
+      sg.append("rect")
+        .attr("x", -nodeW / 2).attr("y", 0)
+        .attr("width", nodeW).attr("height", nodeH)
+        .attr("rx", 8).attr("fill", COLORS.cardBg)
+        .attr("stroke", color).attr("stroke-width", 1.5);
+
+      // Step number circle
+      sg.append("circle")
+        .attr("cx", -nodeW / 2 + 28).attr("cy", nodeH / 2)
+        .attr("r", 14)
+        .attr("fill", color).attr("fill-opacity", 0.15)
+        .attr("stroke", color).attr("stroke-width", 1);
+
+      sg.append("text")
+        .attr("x", -nodeW / 2 + 28).attr("y", nodeH / 2 + 1)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", color).attr("font-size", 13).attr("font-weight", 700)
+        .attr("font-family", FONT_MONO)
+        .text(si + 1);
+
+      // Step label
+      sg.append("text")
+        .attr("x", -nodeW / 2 + 54).attr("y", nodeH / 2 - 8)
+        .attr("fill", color).attr("font-size", 13).attr("font-weight", 600)
+        .attr("font-family", FONT_MONO)
+        .text(step.label);
+
+      // Step description
+      sg.append("text")
+        .attr("x", -nodeW / 2 + 54).attr("y", nodeH / 2 + 10)
+        .attr("fill", COLORS.textDim).attr("font-size", 10)
+        .attr("font-family", FONT_MONO)
+        .text(step.desc);
+
+      // Status indicator (will be updated during execution)
+      sg.append("text").attr("class", "step-status")
+        .attr("x", nodeW / 2 - 40).attr("y", nodeH / 2 + 1)
+        .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 10)
+        .attr("font-family", FONT_MONO)
+        .text("pending");
+
+      sg.transition().delay(si * 100).duration(500).attr("opacity", 1);
+
+      // Connector arrow to next step
+      if (si < numSteps - 1) {
+        const arrowY = y + nodeH;
+        lg.append("line").attr("class", "chain-connector")
+          .attr("x1", centerX).attr("y1", arrowY + 2)
+          .attr("x2", centerX).attr("y2", arrowY + nodeGap - 2)
+          .attr("stroke", COLORS.border).attr("stroke-width", 1)
+          .attr("stroke-dasharray", "3,3").attr("opacity", 0)
+          .transition().delay(si * 100 + 300).duration(300).attr("opacity", 0.4);
+
+        lg.append("polygon").attr("class", "chain-connector")
+          .attr("points", `${centerX},${arrowY + nodeGap - 2} ${centerX - 4},${arrowY + nodeGap - 9} ${centerX + 4},${arrowY + nodeGap - 9}`)
+          .attr("fill", COLORS.border).attr("opacity", 0)
+          .transition().delay(si * 100 + 300).duration(300).attr("opacity", 0.4);
+      }
+    });
+
+    // Store firstNodeY for phase 3
+    lg.property("__firstNodeY", firstNodeY);
+    lg.property("__nodeH", nodeH);
+    lg.property("__nodeGap", nodeGap);
+
+  }, 1400));
+
+  // ---- Phase 3: Steps execute one by one ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer6", "step-l6-execute");
+
+    const firstNodeY = lg.property("__firstNodeY");
+    const nodeH = lg.property("__nodeH");
+    const nodeGap = lg.property("__nodeGap");
+
+    const stepNodes = lg.selectAll(".chain-step").nodes();
+
+    steps.forEach((step, si) => {
+      const color = STEP_COLORS[si % STEP_COLORS.length];
+
+      timers.push(d3.timeout(() => {
+        const node = d3.select(stepNodes[si]);
+
+        // Update status to "running"
+        node.select(".step-status")
+          .transition().duration(200)
+          .attr("fill", color)
+          .text("running");
+
+        // Highlight border
+        node.select("rect")
+          .transition().duration(300)
+          .attr("stroke-width", 2.5)
+          .attr("filter", "url(#glow)");
+
+        // Progress bar at bottom of node
+        const nodeW = W * 0.62;
+        node.append("rect").attr("class", "progress-bar")
+          .attr("x", -nodeW / 2 + 4).attr("y", nodeH - 5)
+          .attr("width", 0).attr("height", 2)
+          .attr("rx", 1).attr("fill", color)
+          .transition().duration(1200).ease(d3.easeLinear)
+          .attr("width", nodeW - 8);
+
+        // After "execution" completes
+        timers.push(d3.timeout(() => {
+          node.select(".step-status")
+            .transition().duration(200)
+            .attr("fill", COLORS.teal)
+            .text("\u2713 done");
+
+          node.select("rect:first-child")
+            .transition().duration(300)
+            .attr("stroke-width", 1.5)
+            .attr("filter", null);
+
+          // Pulse the connector arrow
+          if (si < numSteps - 1) {
+            const y = firstNodeY + si * (nodeH + nodeGap) + nodeH;
+            lg.append("circle")
+              .attr("cx", centerX).attr("cy", y + 2)
+              .attr("r", 3).attr("fill", color).attr("filter", "url(#glow)")
+              .transition().duration(400).ease(d3.easeQuadIn)
+              .attr("cy", y + nodeGap - 2)
+              .attr("opacity", 0).remove();
+          }
+        }, 1300));
+
+      }, si * 1600));
+    });
+
+  }, 3200));
+
+  // ---- Phase 4: Output ready ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer6", "step-l6-output");
+
+    const firstNodeY = lg.property("__firstNodeY");
+    const nodeH = lg.property("__nodeH");
+    const nodeGap = lg.property("__nodeGap");
+    const lastNodeY = firstNodeY + (numSteps - 1) * (nodeH + nodeGap);
+
+    // Output node below the chain
+    const outputY = lastNodeY + nodeH + 28;
+    const outputW = 280;
+    const outputH = 34;
+
+    // Connector from last step to output
+    lg.append("line")
+      .attr("x1", centerX).attr("y1", lastNodeY + nodeH + 2)
+      .attr("x2", centerX).attr("y2", outputY)
+      .attr("stroke", COLORS.gold).attr("stroke-width", 1)
+      .attr("stroke-dasharray", "4,4").attr("opacity", 0)
+      .transition().duration(400).attr("opacity", 0.4);
+
+    lg.append("polygon")
+      .attr("points", `${centerX},${outputY} ${centerX - 4},${outputY - 7} ${centerX + 4},${outputY - 7}`)
+      .attr("fill", COLORS.gold).attr("opacity", 0)
+      .transition().duration(400).attr("opacity", 0.4);
+
+    const outG = lg.append("g")
+      .attr("transform", `translate(${centerX}, ${outputY})`).attr("opacity", 0);
+
+    outG.append("rect")
+      .attr("x", -outputW / 2).attr("y", 0)
+      .attr("width", outputW).attr("height", outputH)
+      .attr("rx", 6).attr("fill", COLORS.cardBg)
+      .attr("stroke", COLORS.gold).attr("stroke-width", 1.5)
+      .attr("filter", "url(#glow)");
+
+    outG.append("text")
+      .attr("y", outputH / 2 + 1)
+      .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+      .attr("fill", COLORS.gold).attr("font-size", 11)
+      .attr("font-family", FONT_MONO)
+      .text("chain_output \u2192 transformer");
+
+    outG.transition().duration(600).attr("opacity", 1);
+
+    // Continuous data flow particle
+    function flowParticle() {
+      if (currentLayer !== 6 || animationPhase !== 4) return;
+      const startY = firstNodeY;
+      const endY = outputY + outputH;
+
+      lg.append("circle")
+        .attr("cx", centerX).attr("cy", startY)
+        .attr("r", 3).attr("fill", COLORS.gold).attr("filter", "url(#glow)")
+        .transition().duration(2500).ease(d3.easeLinear)
+        .attr("cy", endY)
+        .attr("opacity", 0).remove()
+        .on("end", () => timers.push(d3.timeout(flowParticle, 800)));
+    }
+    timers.push(d3.timeout(flowParticle, 400));
+
+  }, 3200 + numSteps * 1600 + 400));
+}
+
+// ============================================================
+//  LAYER 7 VISUALIZATION
+// ============================================================
+function playLayer7() {
+  clearViz();
+  currentLayer = 7;
+  layer7Played = true;
+  setLayerIndicator(7);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+  clearSteps("steps-layer3");
+  clearSteps("steps-layer4");
+  clearSteps("steps-layer5");
+  clearSteps("steps-layer6");
+
+  const lg = g.append("g").attr("class", "layer7-group");
+  const tokens = LAYER7_DATA.tokens;
+  const matrix = LAYER7_DATA.attention_matrix;
+  const n = tokens.length;
+
+  const centerX = W / 2;
+
+  // ---- Phase 1: Tokens appear as a row ----
+  animationPhase = 1;
+  setStep("steps-layer7", "step-l7-tokens");
+
+  // Title
+  lg.append("text")
+    .attr("x", centerX).attr("y", 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.teal).attr("font-size", 13)
+    .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+    .attr("opacity", 0)
+    .text("SELF-ATTENTION (HEAD 0 OF 96)")
+    .transition().duration(500).attr("opacity", 1);
+
+  // Stats line
+  lg.append("text")
+    .attr("x", centerX).attr("y", 48)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 10)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text(`${LAYER7_DATA.num_heads} heads × ${LAYER7_DATA.num_layers} layers = ${LAYER7_DATA.num_heads * LAYER7_DATA.num_layers} attention operations`)
+    .transition().delay(200).duration(500).attr("opacity", 0.4);
+
+  // Token row at top — these become column headers for the matrix
+  const cellSize = Math.min(52, (W - 160) / n);
+  const matrixW = n * cellSize;
+  const matrixStartX = centerX - matrixW / 2;
+  const labelsY = 80;
+
+  // Column labels (top)
+  tokens.forEach((tok, ti) => {
+    const label = tok.trim() || "\\s";
+    const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+    const x = matrixStartX + ti * cellSize + cellSize / 2;
+
+    lg.append("text").attr("class", "col-label")
+      .attr("x", x).attr("y", labelsY)
+      .attr("text-anchor", "middle")
+      .attr("fill", color).attr("font-size", 10).attr("font-weight", 600)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text(label)
+      .transition().delay(ti * 50).duration(400).attr("opacity", 1);
+  });
+
+  // ---- Phase 2: Heatmap matrix appears ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer7", "step-l7-matrix");
+
+    const matrixY = labelsY + 16;
+
+    // Color scale: 0 = dark bg, 1 = bright teal
+    const heatScale = d3.scaleSequential(t => {
+      const r = Math.round(13 + t * (78 - 13));
+      const g = Math.round(17 + t * (201 - 17));
+      const b = Math.round(23 + t * (176 - 23));
+      return `rgb(${r},${g},${b})`;
+    }).domain([0, 1]);
+
+    // Row labels (left)
+    tokens.forEach((tok, ri) => {
+      const label = tok.trim() || "\\s";
+      const color = TOKEN_COLORS[ri % TOKEN_COLORS.length];
+      const y = matrixY + ri * cellSize + cellSize / 2;
+
+      lg.append("text").attr("class", "row-label")
+        .attr("x", matrixStartX - 10).attr("y", y + 1)
+        .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+        .attr("fill", color).attr("font-size", 10).attr("font-weight", 600)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text(label)
+        .transition().delay(ri * 50).duration(400).attr("opacity", 1);
+    });
+
+    // Draw matrix cells
+    matrix.forEach((row, ri) => {
+      row.forEach((val, ci) => {
+        const x = matrixStartX + ci * cellSize;
+        const y = matrixY + ri * cellSize;
+
+        // Cell background
+        const cell = lg.append("rect").attr("class", "attn-cell")
+          .attr("x", x + 1).attr("y", y + 1)
+          .attr("width", cellSize - 2).attr("height", cellSize - 2)
+          .attr("rx", 3)
+          .attr("fill", val > 0 ? heatScale(val) : COLORS.cardBg)
+          .attr("stroke", COLORS.border).attr("stroke-width", 0.5)
+          .attr("opacity", 0)
+          .attr("data-row", ri).attr("data-col", ci).attr("data-val", val);
+
+        cell.transition()
+          .delay(ri * 60 + ci * 30)
+          .duration(300)
+          .attr("opacity", val > 0 ? 0.9 : 0.3);
+
+        // Value text inside cell
+        if (val > 0) {
+          lg.append("text").attr("class", "attn-val")
+            .attr("x", x + cellSize / 2).attr("y", y + cellSize / 2 + 1)
+            .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+            .attr("fill", val > 0.3 ? "#0d1117" : COLORS.textDim)
+            .attr("font-size", 9).attr("font-weight", val > 0.3 ? 700 : 400)
+            .attr("font-family", FONT_MONO)
+            .attr("opacity", 0)
+            .text(val.toFixed(2))
+            .transition().delay(ri * 60 + ci * 30 + 200).duration(300)
+            .attr("opacity", val > 0.3 ? 1 : 0.6);
+        }
+      });
+    });
+
+    // "Query →" and "Key ↓" axis labels
+    lg.append("text")
+      .attr("x", matrixStartX + matrixW / 2).attr("y", matrixY - 6)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 9)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("← Key (attends to) →")
+      .transition().delay(400).duration(400).attr("opacity", 0.4);
+
+    lg.append("text")
+      .attr("transform", `translate(${matrixStartX - 55}, ${matrixY + matrixW / 2}) rotate(-90)`)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 9)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("← Query (from) →")
+      .transition().delay(400).duration(400).attr("opacity", 0.4);
+
+    // Store matrixY for later
+    lg.property("__matrixY", matrixY);
+    lg.property("__cellSize", cellSize);
+
+  }, 1400));
+
+  // ---- Phase 3: Highlight row by row ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer7", "step-l7-highlight");
+
+    const matrixY = lg.property("__matrixY");
+    const cs = lg.property("__cellSize");
+    let currentRow = 0;
+
+    // Highlight indicator
+    const highlightRect = lg.append("rect").attr("class", "row-highlight")
+      .attr("x", matrixStartX - 2).attr("y", matrixY + 1)
+      .attr("width", matrixW + 4).attr("height", cs - 2)
+      .attr("rx", 3).attr("fill", "none")
+      .attr("stroke", COLORS.gold).attr("stroke-width", 2)
+      .attr("opacity", 0);
+
+    highlightRect.transition().duration(300).attr("opacity", 0.8);
+
+    // Description text
+    const descText = lg.append("text").attr("class", "highlight-desc")
+      .attr("x", centerX).attr("y", matrixY + n * cs + 24)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.gold).attr("font-size", 11)
+      .attr("font-family", FONT_MONO).attr("opacity", 0);
+
+    descText.transition().duration(300).attr("opacity", 0.8);
+
+    function highlightRow() {
+      if (currentLayer !== 7 || animationPhase !== 3) return;
+
+      const tok = tokens[currentRow].trim() || "\\s";
+      const row = matrix[currentRow];
+      const attended = row
+        .map((v, i) => ({ v, t: tokens[i].trim() || "\\s" }))
+        .filter(d => d.v > 0)
+        .sort((a, b) => b.v - a.v);
+
+      const topAttend = attended.slice(0, 3).map(d => `${d.t}(${d.v.toFixed(2)})`).join(", ");
+
+      highlightRect.transition().duration(400)
+        .attr("y", matrixY + currentRow * cs + 1);
+
+      descText.text(`"${tok}" attends to: ${topAttend}`)
+        .attr("opacity", 0).transition().duration(300).attr("opacity", 0.8);
+
+      currentRow = (currentRow + 1) % n;
+      timers.push(d3.timeout(highlightRow, 1500));
+    }
+
+    highlightRow();
+
+  }, 5000));
+
+  // ---- Phase 4: Arc diagram ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer7", "step-l7-arcs");
+
+    // Fade out matrix
+    lg.selectAll(".attn-cell, .attn-val, .col-label, .row-label, .row-highlight, .highlight-desc")
+      .transition().duration(600).attr("opacity", 0);
+
+    // Remove axis labels and matrix labels
+    lg.selectAll("text").filter(function() {
+      const t = d3.select(this).text();
+      return t.includes("Key") || t.includes("Query");
+    }).transition().duration(600).attr("opacity", 0);
+
+    timers.push(d3.timeout(() => {
+      // Remove faded elements
+      lg.selectAll(".attn-cell, .attn-val, .col-label, .row-label, .row-highlight, .highlight-desc").remove();
+
+      // Token nodes in a horizontal row
+      const arcY = H * 0.38;
+      const tokenW = 60;
+      const tokenGap = 14;
+      const totalArcW = n * tokenW + (n - 1) * tokenGap;
+      const arcStartX = centerX - totalArcW / 2;
+
+      // Draw token nodes
+      const tokenPositions = [];
+      tokens.forEach((tok, ti) => {
+        const x = arcStartX + ti * (tokenW + tokenGap) + tokenW / 2;
+        const color = TOKEN_COLORS[ti % TOKEN_COLORS.length];
+        const label = tok.trim() || "\\s";
+
+        tokenPositions.push(x);
+
+        const tg = lg.append("g").attr("class", "arc-token")
+          .attr("transform", `translate(${x}, ${arcY})`).attr("opacity", 0);
+
+        tg.append("rect")
+          .attr("x", -tokenW / 2).attr("y", -16)
+          .attr("width", tokenW).attr("height", 32)
+          .attr("rx", 6).attr("fill", COLORS.cardBg)
+          .attr("stroke", color).attr("stroke-width", 1.5);
+
+        tg.append("text")
+          .attr("y", 1)
+          .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+          .attr("fill", color).attr("font-size", 12).attr("font-weight", 600)
+          .attr("font-family", FONT_MONO)
+          .text(label);
+
+        tg.transition().delay(ti * 60).duration(400).attr("opacity", 1);
+      });
+
+      // Draw arcs for the last row (Tokyo attends to everything)
+      const focusRow = n - 1; // "Tokyo" — attends to all tokens
+      const row = matrix[focusRow];
+
+      // Label
+      const focusLabel = tokens[focusRow].trim();
+      lg.append("text")
+        .attr("x", centerX).attr("y", arcY - 40)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.gold).attr("font-size", 12)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text(`Attention from "${focusLabel}" to all tokens`)
+        .transition().delay(n * 60 + 200).duration(400).attr("opacity", 0.7);
+
+      // Draw arcs above the tokens
+      row.forEach((val, ci) => {
+        if (val <= 0 || ci === focusRow) return;
+
+        const x1 = tokenPositions[focusRow];
+        const x2 = tokenPositions[ci];
+        const midX = (x1 + x2) / 2;
+        const dist = Math.abs(x1 - x2);
+        const arcHeight = dist * 0.45 + val * 80;
+
+        const color = TOKEN_COLORS[ci % TOKEN_COLORS.length];
+        const strokeW = 1 + val * 6;
+
+        // Arc path (quadratic bezier going upward)
+        const path = `M ${x1} ${arcY - 16} Q ${midX} ${arcY - 16 - arcHeight} ${x2} ${arcY - 16}`;
+
+        lg.append("path").attr("class", "attn-arc")
+          .attr("d", path)
+          .attr("fill", "none")
+          .attr("stroke", color).attr("stroke-width", strokeW)
+          .attr("opacity", 0)
+          .transition().delay(ci * 100 + n * 60 + 400).duration(600)
+          .attr("opacity", val * 1.5);
+
+        // Weight label at arc peak
+        lg.append("text").attr("class", "arc-weight")
+          .attr("x", midX).attr("y", arcY - 16 - arcHeight / 2 - 4)
+          .attr("text-anchor", "middle")
+          .attr("fill", color).attr("font-size", 9).attr("font-weight", 600)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(val.toFixed(2))
+          .transition().delay(ci * 100 + n * 60 + 800).duration(300)
+          .attr("opacity", 0.7);
+      });
+
+      // Self-attention indicator
+      const selfVal = row[focusRow];
+      if (selfVal > 0) {
+        const sx = tokenPositions[focusRow];
+        lg.append("ellipse").attr("class", "self-attn")
+          .attr("cx", sx).attr("cy", arcY + 28)
+          .attr("rx", 16).attr("ry", 10)
+          .attr("fill", "none")
+          .attr("stroke", TOKEN_COLORS[focusRow]).attr("stroke-width", 1 + selfVal * 4)
+          .attr("opacity", 0)
+          .transition().delay(n * 60 + 1200).duration(400)
+          .attr("opacity", selfVal * 1.2);
+
+        lg.append("text")
+          .attr("x", sx).attr("y", arcY + 48)
+          .attr("text-anchor", "middle")
+          .attr("fill", TOKEN_COLORS[focusRow]).attr("font-size", 9)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(`self: ${selfVal.toFixed(2)}`)
+          .transition().delay(n * 60 + 1400).duration(300).attr("opacity", 0.6);
+      }
+
+      // Formula at bottom
+      const formulaY = H * 0.72;
+      const formulaLines = [
+        { text: "Q = embeddings × W_query", color: COLORS.teal },
+        { text: "K = embeddings × W_key", color: "#61afef" },
+        { text: "V = embeddings × W_value", color: "#c678dd" },
+        { text: "", color: COLORS.textDim },
+        { text: "attention = softmax(Q·Kᵀ / √d_k) · V", color: COLORS.gold },
+      ];
+
+      formulaLines.forEach((fl, fi) => {
+        if (!fl.text) return;
+        lg.append("text")
+          .attr("x", centerX).attr("y", formulaY + fi * 20)
+          .attr("text-anchor", "middle")
+          .attr("fill", fl.color).attr("font-size", 11)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(fl.text)
+          .transition().delay(fi * 100 + 2000).duration(400).attr("opacity", 0.6);
+      });
+
+    }, 700));
+
+  }, 12000));
+}
+
+// ============================================================
+//  LAYER 8 VISUALIZATION
+// ============================================================
+function playLayer8() {
+  clearViz();
+  currentLayer = 8;
+  layer8Played = true;
+  setLayerIndicator(8);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+  clearSteps("steps-layer3");
+  clearSteps("steps-layer4");
+  clearSteps("steps-layer5");
+  clearSteps("steps-layer6");
+  clearSteps("steps-layer7");
+
+  const lg = g.append("g").attr("class", "layer8-group");
+  const preds = LAYER8_DATA.predictions;
+  const centerX = W / 2;
+
+  // Bar chart area
+  const barAreaX = 40;
+  const barAreaW = W - 80;
+  const barMaxW = barAreaW * 0.7;
+  const barH = 28;
+  const barGap = 6;
+
+  // ---- Phase 1: Setup — show the concept ----
+  animationPhase = 1;
+  setStep("steps-layer8", "step-l8-setup");
+
+  // Title
+  lg.append("text")
+    .attr("x", centerX).attr("y", 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.teal).attr("font-size", 13)
+    .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+    .attr("opacity", 0)
+    .text("NEXT-TOKEN PREDICTION")
+    .transition().duration(500).attr("opacity", 1);
+
+  // Config line
+  lg.append("text")
+    .attr("x", centerX).attr("y", 48)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 10)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text(`vocab: ${LAYER8_DATA.vocab_size.toLocaleString()} tokens | temp: ${LAYER8_DATA.temperature} | top_p: ${LAYER8_DATA.top_p} | model: ${LAYER8_DATA.model}`)
+    .transition().delay(200).duration(500).attr("opacity", 0.4);
+
+  // Position counter (will be updated)
+  const posLabel = lg.append("text")
+    .attr("x", centerX).attr("y", 76)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.gold).attr("font-size", 12).attr("font-weight", 600)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text("Position 0: selecting first token...");
+  posLabel.transition().delay(400).duration(500).attr("opacity", 0.8);
+
+  // ---- Phase 2: Animated bar chart cycling through positions ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer8", "step-l8-sample");
+
+    const chartY = 100;
+    const chartG = lg.append("g").attr("class", "bar-chart")
+      .attr("transform", `translate(0, ${chartY})`);
+
+    let currentPredIdx = 0;
+
+    function showPrediction(predIdx) {
+      if (currentLayer !== 8) return;
+
+      const pred = preds[predIdx];
+      const alts = pred.alts;
+      const maxProb = Math.max(...alts.map(a => a.prob), 0.01);
+
+      // Update position label
+      posLabel.text(`Position ${pred.pos}: selecting token...`);
+
+      // Clear previous bars
+      chartG.selectAll("*").remove();
+
+      // Draw bars
+      alts.forEach((alt, ai) => {
+        const y = ai * (barH + barGap);
+        const isChosen = alt.token === pred.chosen;
+        const w = Math.max(2, (alt.prob / Math.max(maxProb, 0.5)) * barMaxW);
+        const color = isChosen ? COLORS.teal : COLORS.textDim;
+
+        // Token label (left)
+        const displayToken = alt.token.replace(/\n/g, "\\n");
+        chartG.append("text")
+          .attr("x", barAreaX + barMaxW + 20).attr("y", y + barH / 2 + 1)
+          .attr("dominant-baseline", "middle")
+          .attr("fill", isChosen ? COLORS.text : COLORS.textDim)
+          .attr("font-size", 12).attr("font-weight", isChosen ? 700 : 400)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(`"${displayToken}"`)
+          .transition().delay(ai * 40).duration(300).attr("opacity", 1);
+
+        // Probability text (right of bar)
+        chartG.append("text")
+          .attr("x", barAreaX - 8).attr("y", y + barH / 2 + 1)
+          .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+          .attr("fill", isChosen ? COLORS.gold : COLORS.textDim)
+          .attr("font-size", 11).attr("font-weight", isChosen ? 700 : 400)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text((alt.prob * 100).toFixed(1) + "%")
+          .transition().delay(ai * 40).duration(300).attr("opacity", 1);
+
+        // Bar background
+        chartG.append("rect")
+          .attr("x", barAreaX).attr("y", y)
+          .attr("width", barMaxW).attr("height", barH)
+          .attr("rx", 4).attr("fill", COLORS.cardBg)
+          .attr("stroke", COLORS.border).attr("stroke-width", 0.5)
+          .attr("opacity", 0)
+          .transition().delay(ai * 40).duration(300).attr("opacity", 0.5);
+
+        // Bar fill
+        chartG.append("rect").attr("class", "bar-fill")
+          .attr("x", barAreaX).attr("y", y)
+          .attr("width", 0).attr("height", barH)
+          .attr("rx", 4).attr("fill", color).attr("opacity", isChosen ? 0.7 : 0.3)
+          .transition().delay(ai * 40 + 100).duration(500).ease(d3.easeCubicOut)
+          .attr("width", w);
+
+        // Chosen indicator — "SAMPLED" label inside the bar
+        if (isChosen) {
+          chartG.append("text")
+            .attr("x", barAreaX + Math.max(w / 2, 30)).attr("y", y + barH / 2 + 1)
+            .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+            .attr("fill", "#0d1117").attr("font-size", 9).attr("font-weight", 700)
+            .attr("font-family", FONT_MONO).attr("opacity", 0)
+            .text("SAMPLED")
+            .transition().delay(alts.length * 40 + 400).duration(300).attr("opacity", 1);
+        }
+      });
+
+      // "softmax(logits / temperature)" label
+      chartG.append("text")
+        .attr("x", centerX).attr("y", alts.length * (barH + barGap) + 20)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 10)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("softmax(logits / temperature)")
+        .transition().delay(300).duration(400).attr("opacity", 0.3);
+
+      // Auto-advance to next prediction
+      currentPredIdx = (predIdx + 1) % preds.length;
+      if (animationPhase === 2) {
+        timers.push(d3.timeout(() => showPrediction(currentPredIdx), 2200));
+      }
+    }
+
+    showPrediction(0);
+
+  }, 1400));
+
+  // ---- Phase 3: Token sequence building up ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer8", "step-l8-sequence");
+
+    // Fade out bar chart
+    lg.select(".bar-chart").transition().duration(500).attr("opacity", 0);
+    posLabel.transition().duration(300).attr("opacity", 0);
+
+    timers.push(d3.timeout(() => {
+      lg.select(".bar-chart").remove();
+
+      // Show token-by-token generation
+      const seqY = 90;
+      const seqG = lg.append("g").attr("class", "sequence-view");
+
+      // Label
+      seqG.append("text")
+        .attr("x", centerX).attr("y", seqY)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 11)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("Token-by-token generation")
+        .transition().duration(400).attr("opacity", 0.5);
+
+      // Token boxes with probabilities
+      const tokenBoxW = W * 0.82;
+      const tokenH = 40;
+      const tokenGap = 4;
+      const startX = centerX - tokenBoxW / 2;
+      const startY = seqY + 24;
+
+      // Show selected predictions as generated tokens
+      const selected = preds.slice(0, 8); // First 8 positions
+      const tokensPerRow = 4;
+
+      selected.forEach((pred, pi) => {
+        const row = Math.floor(pi / tokensPerRow);
+        const col = pi % tokensPerRow;
+        const colW = tokenBoxW / tokensPerRow;
+        const x = startX + col * colW;
+        const y = startY + row * (tokenH + tokenGap + 30);
+
+        const tg = seqG.append("g")
+          .attr("transform", `translate(${x}, ${y})`).attr("opacity", 0);
+
+        // Token box
+        const boxW = colW - 8;
+        tg.append("rect")
+          .attr("x", 4).attr("y", 0)
+          .attr("width", boxW).attr("height", tokenH)
+          .attr("rx", 4).attr("fill", COLORS.cardBg)
+          .attr("stroke", COLORS.teal).attr("stroke-width", 1);
+
+        // Token text
+        const displayToken = pred.chosen.replace(/\n/g, "\\n");
+        tg.append("text")
+          .attr("x", boxW / 2 + 4).attr("y", tokenH / 2 - 2)
+          .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+          .attr("fill", COLORS.text).attr("font-size", 12).attr("font-weight", 600)
+          .attr("font-family", FONT_MONO)
+          .text(displayToken);
+
+        // Probability below
+        const probColor = pred.prob > 0.9 ? COLORS.teal : pred.prob > 0.5 ? COLORS.gold : "#e06c75";
+        tg.append("text")
+          .attr("x", boxW / 2 + 4).attr("y", tokenH + 14)
+          .attr("text-anchor", "middle")
+          .attr("fill", probColor).attr("font-size", 9)
+          .attr("font-family", FONT_MONO)
+          .text(`p=${pred.prob.toFixed(3)}`);
+
+        // Position number
+        tg.append("text")
+          .attr("x", 10).attr("y", -6)
+          .attr("fill", COLORS.textDim).attr("font-size", 8)
+          .attr("font-family", FONT_MONO)
+          .text(`pos ${pred.pos}`);
+
+        tg.transition().delay(pi * 200).duration(400).attr("opacity", 1);
+      });
+
+    }, 600));
+
+  }, 12000));
+
+  // ---- Phase 4: Full generated text ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer8", "step-l8-output");
+
+    // Fade out sequence view
+    lg.select(".sequence-view").transition().duration(500).attr("opacity", 0);
+
+    timers.push(d3.timeout(() => {
+      lg.select(".sequence-view").remove();
+
+      const outputY = H * 0.28;
+      const boxW = W * 0.82;
+      const text = LAYER8_DATA.generated_text;
+
+      // Title
+      lg.append("text")
+        .attr("x", centerX).attr("y", outputY - 24)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.gold).attr("font-size", 13)
+        .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+        .attr("opacity", 0)
+        .text("GENERATED OUTPUT (FIRST 20 TOKENS)")
+        .transition().duration(500).attr("opacity", 1);
+
+      // Output box
+      lg.append("rect")
+        .attr("x", centerX - boxW / 2).attr("y", outputY)
+        .attr("width", boxW).attr("height", 50)
+        .attr("rx", 8).attr("fill", COLORS.cardBg)
+        .attr("stroke", COLORS.gold).attr("stroke-width", 1.5)
+        .attr("filter", "url(#glow)")
+        .attr("opacity", 0)
+        .transition().duration(500).attr("opacity", 1);
+
+      // Text characters appear one by one
+      const chars = text.split("");
+      const charW = Math.min(7.5, (boxW - 30) / chars.length);
+      const textStartX = centerX - boxW / 2 + 15;
+
+      chars.forEach((ch, ci) => {
+        lg.append("text")
+          .attr("x", textStartX + ci * charW).attr("y", outputY + 30)
+          .attr("fill", COLORS.text).attr("font-size", 12)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(ch)
+          .transition().delay(ci * 30).duration(200).attr("opacity", 1);
+      });
+
+      // Stats below
+      const statsY = outputY + 80;
+      const stats = [
+        { label: "tokens generated", value: "517", color: COLORS.teal },
+        { label: "temperature", value: "0.7", color: COLORS.gold },
+        { label: "sampling method", value: "top-p (nucleus)", color: "#c678dd" },
+      ];
+
+      stats.forEach((s, si) => {
+        const sx = centerX - 160 + si * 160;
+        lg.append("text")
+          .attr("x", sx).attr("y", statsY)
+          .attr("text-anchor", "middle")
+          .attr("fill", s.color).attr("font-size", 18).attr("font-weight", 700)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(s.value)
+          .transition().delay(si * 150 + chars.length * 30).duration(400).attr("opacity", 1);
+
+        lg.append("text")
+          .attr("x", sx).attr("y", statsY + 18)
+          .attr("text-anchor", "middle")
+          .attr("fill", COLORS.textDim).attr("font-size", 9)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(s.label)
+          .transition().delay(si * 150 + chars.length * 30 + 200).duration(400).attr("opacity", 0.6);
+      });
+
+      // Formula
+      lg.append("text")
+        .attr("x", centerX).attr("y", statsY + 50)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 10)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("next_token = sample(softmax(logits / T), top_p=0.9)")
+        .transition().delay(chars.length * 30 + 600).duration(400).attr("opacity", 0.4);
+
+    }, 600));
+
+  }, 18000));
+}
+
+// ============================================================
+//  LAYER 9 VISUALIZATION
+// ============================================================
+function playLayer9() {
+  clearViz();
+  currentLayer = 9;
+  layer9Played = true;
+  setLayerIndicator(9);
+  clearSteps("steps-layer1");
+  clearSteps("steps-layer2");
+  clearSteps("steps-layer3");
+  clearSteps("steps-layer4");
+  clearSteps("steps-layer5");
+  clearSteps("steps-layer6");
+  clearSteps("steps-layer7");
+  clearSteps("steps-layer8");
+
+  const lg = g.append("g").attr("class", "layer9-group");
+  const ids = LAYER9_DATA.token_ids;
+  const texts = LAYER9_DATA.token_texts;
+  const n = ids.length;
+
+  const centerX = W / 2;
+
+  // ---- Phase 1: Token IDs in a grid ----
+  animationPhase = 1;
+  setStep("steps-layer9", "step-l9-ids");
+
+  // Title
+  lg.append("text")
+    .attr("x", centerX).attr("y", 30)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.teal).attr("font-size", 13)
+    .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+    .attr("opacity", 0)
+    .text("DETOKENIZATION (DECODE)")
+    .transition().duration(500).attr("opacity", 1);
+
+  lg.append("text")
+    .attr("x", centerX).attr("y", 48)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 10)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text(`${LAYER9_DATA.total_response_tokens} token IDs → ${LAYER9_DATA.decoding_method}`)
+    .transition().delay(200).duration(500).attr("opacity", 0.4);
+
+  // "token_ids[]" label
+  lg.append("text")
+    .attr("x", centerX).attr("y", 72)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 11)
+    .attr("font-family", FONT_MONO).attr("opacity", 0)
+    .text("token_ids[]")
+    .transition().delay(300).duration(400).attr("opacity", 0.6);
+
+  // Token ID boxes in a grid
+  const idBoxW = 68;
+  const idBoxH = 32;
+  const idGap = 8;
+  const perRow = 8;
+  const totalRowW = perRow * idBoxW + (perRow - 1) * idGap;
+  const gridStartX = centerX - totalRowW / 2;
+  const gridStartY = 86;
+
+  const idGroups = [];
+  ids.forEach((id, i) => {
+    const row = Math.floor(i / perRow);
+    const col = i % perRow;
+    const x = gridStartX + col * (idBoxW + idGap);
+    const y = gridStartY + row * (idBoxH + idGap);
+    const color = TOKEN_COLORS[i % TOKEN_COLORS.length];
+
+    const ig = lg.append("g").attr("class", "id-box")
+      .attr("transform", `translate(${x}, ${y})`).attr("opacity", 0);
+
+    ig.append("rect")
+      .attr("width", idBoxW).attr("height", idBoxH)
+      .attr("rx", 4).attr("fill", COLORS.cardBg)
+      .attr("stroke", color).attr("stroke-width", 1);
+
+    ig.append("text")
+      .attr("x", idBoxW / 2).attr("y", idBoxH / 2 + 1)
+      .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+      .attr("fill", color).attr("font-size", 12).attr("font-weight", 600)
+      .attr("font-family", FONT_MONO).text(id);
+
+    ig.transition().delay(i * 40).duration(300).attr("opacity", 1);
+    idGroups.push({ ig, x, y, color });
+  });
+
+  // ---- Phase 2: Decode — text appears below each ID ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer9", "step-l9-decode");
+
+    // "decode()" label
+    const decodeY = gridStartY + Math.ceil(n / perRow) * (idBoxH + idGap) + 10;
+    lg.append("text")
+      .attr("x", centerX).attr("y", decodeY)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 11)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text("decode(token_id) →")
+      .transition().duration(400).attr("opacity", 0.5);
+
+    // Text fragments appear below each ID box
+    const textY = decodeY + 20;
+    const textGroups = [];
+
+    ids.forEach((id, i) => {
+      const row = Math.floor(i / perRow);
+      const col = i % perRow;
+      const x = gridStartX + col * (idBoxW + idGap);
+      const y = textY + row * (idBoxH + idGap);
+      const color = TOKEN_COLORS[i % TOKEN_COLORS.length];
+      const text = texts[i];
+      const displayText = text === " " ? "\\s" : text;
+
+      // Arrow from ID to text
+      const idBottomY = gridStartY + row * (idBoxH + idGap) + idBoxH;
+      lg.append("line")
+        .attr("x1", x + idBoxW / 2).attr("y1", idBottomY + 2)
+        .attr("x2", x + idBoxW / 2).attr("y2", y - 2)
+        .attr("stroke", color).attr("stroke-width", 0.8)
+        .attr("stroke-dasharray", "2,2").attr("opacity", 0)
+        .transition().delay(i * 60).duration(300).attr("opacity", 0.3);
+
+      // Text box
+      const tg = lg.append("g").attr("class", "text-fragment")
+        .attr("transform", `translate(${x}, ${y})`).attr("opacity", 0);
+
+      tg.append("rect")
+        .attr("width", idBoxW).attr("height", idBoxH)
+        .attr("rx", 4).attr("fill", color).attr("fill-opacity", 0.1)
+        .attr("stroke", color).attr("stroke-width", 1).attr("stroke-opacity", 0.4);
+
+      tg.append("text")
+        .attr("x", idBoxW / 2).attr("y", idBoxH / 2 + 1)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.text).attr("font-size", 11)
+        .attr("font-family", FONT_MONO).text(displayText);
+
+      tg.transition().delay(i * 60 + 200).duration(400).attr("opacity", 1);
+      textGroups.push({ tg, x, y, text, color });
+    });
+
+    lg.property("__textGroups", textGroups);
+
+  }, 1800));
+
+  // ---- Phase 3: Fragments merge into continuous text ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 3;
+    setStep("steps-layer9", "step-l9-merge");
+
+    // Fade out ID boxes, arrows, and labels above the text
+    lg.selectAll(".id-box").transition().duration(500).attr("opacity", 0);
+    lg.selectAll("line").transition().duration(500).attr("opacity", 0);
+
+    // Move text fragments together into a single line
+    const textGroups = lg.property("__textGroups");
+    const mergeY = H * 0.35;
+
+    // Calculate merged positions
+    let runningX = 0;
+    const charW = 8;
+    const mergedPositions = [];
+    texts.forEach((text) => {
+      mergedPositions.push(runningX);
+      runningX += text.length * charW;
+    });
+    const totalTextW = runningX;
+    const mergeStartX = centerX - totalTextW / 2;
+
+    textGroups.forEach(({ tg, text, color }, i) => {
+      const targetX = mergeStartX + mergedPositions[i];
+      const fragW = text.length * charW + 4;
+
+      // Morph to just the text, no box
+      tg.transition().delay(i * 30).duration(800).ease(d3.easeCubicInOut)
+        .attr("transform", `translate(${targetX}, ${mergeY})`);
+
+      // Fade the box border
+      tg.select("rect")
+        .transition().delay(i * 30 + 400).duration(400)
+        .attr("stroke-opacity", 0).attr("fill-opacity", 0)
+        .attr("width", fragW).attr("height", 28);
+
+      // Reposition text within
+      tg.select("text")
+        .transition().delay(i * 30 + 400).duration(400)
+        .attr("x", fragW / 2).attr("y", 15)
+        .attr("fill", COLORS.textDim);
+    });
+
+  }, 5200));
+
+  // ---- Phase 4: Raw output display ----
+  timers.push(d3.timeout(() => {
+    animationPhase = 4;
+    setStep("steps-layer9", "step-l9-raw");
+
+    // Fade out fragments
+    lg.selectAll(".text-fragment, .id-box").transition().duration(500).attr("opacity", 0);
+
+    timers.push(d3.timeout(() => {
+      lg.selectAll(".text-fragment, .id-box, line").remove();
+
+      // Show the raw output in a monospace "ugly" style
+      const rawY = H * 0.35;
+      const boxW = W * 0.88;
+      const rawText = LAYER9_DATA.raw_output;
+
+      // Title
+      lg.append("text")
+        .attr("x", centerX).attr("y", rawY - 24)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 13)
+        .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+        .attr("opacity", 0)
+        .text("RAW DECODED OUTPUT")
+        .transition().duration(500).attr("opacity", 0.6);
+
+      // Raw text box — styled to look "unpolished"
+      const lineH = 18;
+      const charsPerLine = Math.floor((boxW - 24) / 7);
+      const lines = [];
+      for (let i = 0; i < rawText.length; i += charsPerLine) {
+        lines.push(rawText.slice(i, i + charsPerLine));
+      }
+
+      const boxH = lines.length * lineH + 24;
+
+      lg.append("rect")
+        .attr("x", centerX - boxW / 2).attr("y", rawY)
+        .attr("width", boxW).attr("height", boxH)
+        .attr("rx", 4)
+        .attr("fill", "#0a0e14")
+        .attr("stroke", COLORS.border).attr("stroke-width", 1)
+        .attr("opacity", 0)
+        .transition().duration(500).attr("opacity", 1);
+
+      // Render raw text line by line (monospace, no formatting, lowercase)
+      lines.forEach((line, li) => {
+        lg.append("text")
+          .attr("x", centerX - boxW / 2 + 12).attr("y", rawY + 18 + li * lineH)
+          .attr("fill", COLORS.textDim).attr("font-size", 11)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(line)
+          .transition().delay(li * 80).duration(300).attr("opacity", 0.7);
+      });
+
+      // Contrast note
+      const noteY = rawY + boxH + 24;
+      lg.append("text")
+        .attr("x", centerX).attr("y", noteY)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#e06c75").attr("font-size", 11)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text("No capitalization. No formatting. No structure.")
+        .transition().delay(lines.length * 80 + 200).duration(500).attr("opacity", 0.7);
+
+      // Stats
+      lg.append("text")
+        .attr("x", centerX).attr("y", noteY + 24)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 10)
+        .attr("font-family", FONT_MONO).attr("opacity", 0)
+        .text(`${LAYER9_DATA.total_response_tokens} tokens decoded via ${LAYER9_DATA.decoding_method}`)
+        .transition().delay(lines.length * 80 + 400).duration(500).attr("opacity", 0.4);
+
+    }, 600));
+
+  }, 8800));
+}
+
+// ============================================================
+//  LAYER 10 VISUALIZATION
+// ============================================================
+function playLayer10() {
+  clearViz();
+  currentLayer = 10;
+  layer10Played = true;
+  setLayerIndicator(10);
+  clearSteps("steps-layer9");
+
+  const lg = g.append("g").attr("class", "layer10-group");
+  const centerX = W / 2;
+
+  // --- Phase 1: Raw text block ---
+  animationPhase = 1;
+  setStep("steps-layer10", "step-l10-raw");
+
+  const rawBoxW = W * 0.75;
+  const rawBoxX = centerX - rawBoxW / 2;
+  const rawY = H * 0.10;
+  const rawBoxH = 130;
+
+  // Title
+  lg.append("text")
+    .attr("x", centerX).attr("y", rawY - 16)
+    .attr("text-anchor", "middle")
+    .attr("fill", COLORS.textDim).attr("font-size", 12)
+    .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+    .attr("opacity", 0)
+    .text("RAW OUTPUT FROM LAYER 9")
+    .transition().duration(500).attr("opacity", 0.6);
+
+  // Raw text box
+  const rawBox = lg.append("g").attr("class", "raw-box");
+
+  rawBox.append("rect")
+    .attr("x", rawBoxX).attr("y", rawY)
+    .attr("width", rawBoxW).attr("height", rawBoxH)
+    .attr("rx", 4)
+    .attr("fill", "#1a1a2e")
+    .attr("stroke", "#e06c75").attr("stroke-width", 1).attr("stroke-opacity", 0.4)
+    .attr("opacity", 0)
+    .transition().duration(600).attr("opacity", 1);
+
+  // Wrap raw text into lines
+  const rawText = LAYER10_DATA.raw_output;
+  const charsPerLine = Math.floor((rawBoxW - 30) / 7.2);
+  const rawLines = [];
+  for (let i = 0; i < rawText.length && rawLines.length < 7; i += charsPerLine) {
+    rawLines.push(rawText.slice(i, i + charsPerLine));
+  }
+
+  rawLines.forEach((line, i) => {
+    rawBox.append("text")
+      .attr("x", rawBoxX + 15).attr("y", rawY + 22 + i * 16)
+      .attr("fill", "#8b949e").attr("font-size", 11)
+      .attr("font-family", FONT_MONO).attr("opacity", 0)
+      .text(line)
+      .transition().delay(i * 60).duration(400).attr("opacity", 0.7);
+  });
+
+  // --- Phase 2: Formatting rules appear ---
+  timers.push(d3.timeout(() => {
+    animationPhase = 2;
+    setStep("steps-layer10", "step-l10-rules");
+
+    const rulesY = rawY + rawBoxH + 36;
+    const ruleH = 34;
+    const ruleGap = 6;
+
+    lg.append("text")
+      .attr("x", centerX).attr("y", rulesY - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", COLORS.textDim).attr("font-size", 11)
+      .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+      .attr("opacity", 0)
+      .text("FORMATTING PIPELINE")
+      .transition().duration(400).attr("opacity", 0.6);
+
+    const rules = LAYER10_DATA.formatting_rules;
+    const ruleBoxW = rawBoxW * 0.85;
+    const ruleBoxX = centerX - ruleBoxW / 2;
+
+    rules.forEach((rule, i) => {
+      const ry = rulesY + i * (ruleH + ruleGap);
+      const rg = lg.append("g").attr("class", "rule-item").attr("opacity", 0);
+
+      // Background
+      rg.append("rect")
+        .attr("x", ruleBoxX).attr("y", ry)
+        .attr("width", ruleBoxW).attr("height", ruleH)
+        .attr("rx", 4)
+        .attr("fill", COLORS.cardBg)
+        .attr("stroke", rule.color).attr("stroke-width", 1).attr("stroke-opacity", 0.3);
+
+      // Icon badge
+      rg.append("rect")
+        .attr("x", ruleBoxX + 8).attr("y", ry + 5)
+        .attr("width", 28).attr("height", 24)
+        .attr("rx", 4)
+        .attr("fill", rule.color).attr("fill-opacity", 0.15);
+
+      rg.append("text")
+        .attr("x", ruleBoxX + 22).attr("y", ry + ruleH / 2 + 1)
+        .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+        .attr("fill", rule.color).attr("font-size", 12)
+        .attr("font-family", FONT_MONO).attr("font-weight", 700)
+        .text(rule.icon);
+
+      // Rule text
+      rg.append("text")
+        .attr("x", ruleBoxX + 46).attr("y", ry + ruleH / 2 + 1)
+        .attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.text).attr("font-size", 12)
+        .attr("font-family", FONT_MONO)
+        .text(rule.rule);
+
+      // Status label
+      const status = rg.append("text")
+        .attr("x", ruleBoxX + ruleBoxW - 16).attr("y", ry + ruleH / 2 + 1)
+        .attr("text-anchor", "end").attr("dominant-baseline", "middle")
+        .attr("fill", COLORS.textDim).attr("font-size", 11)
+        .attr("font-family", FONT_MONO)
+        .text("pending");
+
+      // Animate in
+      rg.transition().delay(i * 400).duration(400).attr("opacity", 1);
+
+      // Mark as applied
+      timers.push(d3.timeout(() => {
+        rg.insert("rect", ":first-child")
+          .attr("x", ruleBoxX).attr("y", ry)
+          .attr("width", 0).attr("height", ruleH)
+          .attr("rx", 4)
+          .attr("fill", rule.color).attr("fill-opacity", 0.06)
+          .transition().duration(300)
+          .attr("width", ruleBoxW);
+
+        status.text("applied").attr("fill", rule.color);
+      }, (i + 1) * 400 + 200));
+    });
+
+    // --- Phase 3: Side-by-side comparison ---
+    timers.push(d3.timeout(() => {
+      animationPhase = 3;
+      setStep("steps-layer10", "step-l10-transform");
+
+      // Fade out raw box and rules
+      lg.selectAll(".raw-box, .rule-item").transition().duration(600).attr("opacity", 0.1);
+      // Also fade the titles above them
+      lg.selectAll("text").filter(function() {
+        const t = d3.select(this).text();
+        return t === "RAW OUTPUT FROM LAYER 9" || t === "FORMATTING PIPELINE";
+      }).transition().duration(600).attr("opacity", 0.1);
+
+      const compY = H * 0.14;
+      const halfW = W * 0.36;
+      const gap = W * 0.04;
+
+      // ---- Left: Raw excerpt ----
+      const leftX = centerX - gap / 2 - halfW;
+
+      lg.append("text")
+        .attr("x", leftX + halfW / 2).attr("y", compY - 10)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#e06c75").attr("font-size", 12)
+        .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+        .attr("opacity", 0).text("BEFORE")
+        .transition().duration(400).attr("opacity", 0.8);
+
+      lg.append("rect")
+        .attr("x", leftX).attr("y", compY)
+        .attr("width", halfW).attr("height", H * 0.55)
+        .attr("rx", 6)
+        .attr("fill", "#1a1a2e")
+        .attr("stroke", "#e06c75").attr("stroke-width", 1).attr("stroke-opacity", 0.3)
+        .attr("opacity", 0)
+        .transition().duration(400).attr("opacity", 1);
+
+      const rawCharsPerLine = Math.floor((halfW - 24) / 6.8);
+      const rawExcerptLines = [];
+      for (let i = 0; i < rawText.length && rawExcerptLines.length < 18; i += rawCharsPerLine) {
+        rawExcerptLines.push(rawText.slice(i, i + rawCharsPerLine));
+      }
+
+      rawExcerptLines.forEach((line, i) => {
+        lg.append("text")
+          .attr("x", leftX + 12).attr("y", compY + 22 + i * 15)
+          .attr("fill", "#8b949e").attr("font-size", 11)
+          .attr("font-family", FONT_MONO).attr("opacity", 0)
+          .text(line)
+          .transition().delay(i * 30).duration(300).attr("opacity", 0.6);
+      });
+
+      // ---- Right: Formatted excerpt ----
+      const rightX = centerX + gap / 2;
+
+      lg.append("text")
+        .attr("x", rightX + halfW / 2).attr("y", compY - 10)
+        .attr("text-anchor", "middle")
+        .attr("fill", COLORS.teal).attr("font-size", 12)
+        .attr("font-family", FONT_MONO).attr("letter-spacing", 2)
+        .attr("opacity", 0).text("AFTER")
+        .transition().duration(400).attr("opacity", 0.8);
+
+      lg.append("rect")
+        .attr("x", rightX).attr("y", compY)
+        .attr("width", halfW).attr("height", H * 0.55)
+        .attr("rx", 6)
+        .attr("fill", COLORS.cardBg)
+        .attr("stroke", COLORS.teal).attr("stroke-width", 1).attr("stroke-opacity", 0.5)
+        .attr("opacity", 0)
+        .transition().duration(400).attr("opacity", 1);
+
+      const fmtLines = LAYER10_DATA.formatted_lines;
+      let fmtY = compY + 26;
+
+      fmtLines.forEach((line, i) => {
+        if (line.type === "blank") { fmtY += 10; return; }
+        const delay = 400 + i * 80;
+
+        if (line.type === "header") {
+          lg.append("text")
+            .attr("x", rightX + 14).attr("y", fmtY)
+            .attr("fill", COLORS.gold).attr("font-size", 13)
+            .attr("font-family", FONT_MONO).attr("font-weight", 700)
+            .attr("opacity", 0).text(line.text)
+            .transition().delay(delay).duration(300).attr("opacity", 1);
+          fmtY += 22;
+        } else if (line.type === "bullet") {
+          lg.append("text")
+            .attr("x", rightX + 14).attr("y", fmtY)
+            .attr("fill", COLORS.teal).attr("font-size", 11)
+            .attr("font-family", FONT_MONO)
+            .attr("opacity", 0).text("\u2022")
+            .transition().delay(delay).duration(300).attr("opacity", 0.8);
+          lg.append("text")
+            .attr("x", rightX + 28).attr("y", fmtY)
+            .attr("fill", COLORS.text).attr("font-size", 12)
+            .attr("font-family", FONT_MONO)
+            .attr("opacity", 0).text(line.text)
+            .transition().delay(delay).duration(300).attr("opacity", 0.85);
+          fmtY += 18;
+        } else {
+          lg.append("text")
+            .attr("x", rightX + 14).attr("y", fmtY)
+            .attr("fill", COLORS.text).attr("font-size", 12)
+            .attr("font-family", FONT_MONO)
+            .attr("opacity", 0).text(line.text)
+            .transition().delay(delay).duration(300).attr("opacity", 0.85);
+          fmtY += 18;
+        }
+      });
+
+      // Arrow between boxes
+      const arrowY = compY + H * 0.275;
+      lg.append("line")
+        .attr("x1", leftX + halfW + 4).attr("y1", arrowY)
+        .attr("x2", rightX - 4).attr("y2", arrowY)
+        .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
+        .attr("stroke-dasharray", "6,4").attr("opacity", 0)
+        .transition().delay(200).duration(400).attr("opacity", 0.5);
+
+      lg.append("polygon")
+        .attr("points", `${rightX - 4},${arrowY} ${rightX - 14},${arrowY - 5} ${rightX - 14},${arrowY + 5}`)
+        .attr("fill", COLORS.teal).attr("opacity", 0)
+        .transition().delay(200).duration(400).attr("opacity", 0.5);
+
+      // --- Phase 4: Final polished output ---
+      timers.push(d3.timeout(() => {
+        animationPhase = 4;
+        setStep("steps-layer10", "step-l10-final");
+
+        // Fade everything out
+        lg.selectAll("*").transition().duration(500).attr("opacity", 0).remove();
+
+        timers.push(d3.timeout(() => {
+          const finalG = lg.append("g").attr("class", "final-output");
+          const cardW = W * 0.82;
+          const cardX = centerX - cardW / 2;
+          const cardY = H * 0.06;
+          const cardH = H * 0.82;
+
+          // Label
+          finalG.append("text")
+            .attr("x", centerX).attr("y", cardY - 10)
+            .attr("text-anchor", "middle")
+            .attr("fill", COLORS.teal).attr("font-size", 12)
+            .attr("font-family", FONT_MONO).attr("letter-spacing", 3)
+            .attr("opacity", 0).text("DELIVERED TO USER")
+            .transition().duration(400).attr("opacity", 0.7);
+
+          // Card background
+          finalG.append("rect")
+            .attr("x", cardX).attr("y", cardY)
+            .attr("width", cardW).attr("height", cardH)
+            .attr("rx", 8)
+            .attr("fill", COLORS.cardBg)
+            .attr("stroke", COLORS.teal).attr("stroke-width", 1.5)
+            .attr("filter", "url(#glow)")
+            .attr("opacity", 0)
+            .transition().duration(500).attr("opacity", 1);
+
+          // Render formatted lines
+          const finalLines = LAYER10_DATA.final_display_lines;
+          let fy = cardY + 30;
+
+          finalLines.forEach((line, i) => {
+            const delay = 80 + i * 50;
+            if (line.type === "blank") { fy += 10; return; }
+
+            if (line.type === "intro") {
+              finalG.append("text")
+                .attr("x", cardX + 22).attr("y", fy)
+                .attr("fill", COLORS.text).attr("font-size", 13)
+                .attr("font-family", FONT_MONO).attr("opacity", 0)
+                .text(line.text)
+                .transition().delay(delay).duration(200).attr("opacity", 0.9);
+              fy += 20;
+            } else if (line.type === "header") {
+              fy += 4;
+              finalG.append("text")
+                .attr("x", cardX + 22).attr("y", fy)
+                .attr("fill", COLORS.gold).attr("font-size", 14)
+                .attr("font-family", FONT_MONO).attr("font-weight", 700)
+                .attr("opacity", 0).text(line.text)
+                .transition().delay(delay).duration(200).attr("opacity", 1);
+              fy += 22;
+            } else if (line.type === "bullet") {
+              finalG.append("text")
+                .attr("x", cardX + 26).attr("y", fy)
+                .attr("fill", COLORS.teal).attr("font-size", 12)
+                .attr("font-family", FONT_MONO)
+                .attr("opacity", 0).text("\u2022")
+                .transition().delay(delay).duration(200).attr("opacity", 0.8);
+              finalG.append("text")
+                .attr("x", cardX + 40).attr("y", fy)
+                .attr("fill", COLORS.text).attr("font-size", 12)
+                .attr("font-family", FONT_MONO)
+                .attr("opacity", 0).text(line.text)
+                .transition().delay(delay).duration(200).attr("opacity", 0.85);
+              fy += 18;
+            } else if (line.type === "sub") {
+              finalG.append("text")
+                .attr("x", cardX + 22).attr("y", fy)
+                .attr("fill", COLORS.textDim).attr("font-size", 11)
+                .attr("font-family", FONT_MONO)
+                .attr("opacity", 0).text(line.text)
+                .transition().delay(delay).duration(200).attr("opacity", 0.7);
+              fy += 16;
+            }
+          });
+
+          // Stats footer
+          finalG.append("text")
+            .attr("x", centerX).attr("y", cardY + cardH + 18)
+            .attr("text-anchor", "middle")
+            .attr("fill", COLORS.textDim).attr("font-size", 10)
+            .attr("font-family", FONT_MONO).attr("opacity", 0)
+            .text("10 layers \u2022 517 tokens \u2022 1 response")
+            .transition().delay(finalLines.length * 50 + 300).duration(500).attr("opacity", 0.4);
+
+        }, 600));
+
+      }, 4000));
+
+    }, rules.length * 400 + 1200));
+
+  }, 2000));
+}
+
+// ============================================================
+// SCROLL-DRIVEN LAYER SWITCHING
+// ============================================================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+
+    if (entry.target.id === "section-layer1" && currentLayer !== 1) {
+      playLayer1();
+    } else if (entry.target.id === "section-layer2" && currentLayer !== 2) {
+      playLayer2();
+    } else if (entry.target.id === "section-layer3" && currentLayer !== 3) {
+      playLayer3();
+    } else if (entry.target.id === "section-layer4" && currentLayer !== 4) {
+      playLayer4();
+    } else if (entry.target.id === "section-layer5" && currentLayer !== 5) {
+      playLayer5();
+    } else if (entry.target.id === "section-layer6" && currentLayer !== 6) {
+      playLayer6();
+    } else if (entry.target.id === "section-layer7" && currentLayer !== 7) {
+      playLayer7();
+    } else if (entry.target.id === "section-layer8" && currentLayer !== 8) {
+      playLayer8();
+    } else if (entry.target.id === "section-layer9" && currentLayer !== 9) {
+      playLayer9();
+    } else if (entry.target.id === "section-layer10" && currentLayer !== 10) {
+      playLayer10();
+    }
+  });
+}, {
+  root: null,
+  threshold: 0.4,
+});
+
+observer.observe(document.getElementById("section-layer1"));
+observer.observe(document.getElementById("section-layer2"));
+observer.observe(document.getElementById("section-layer3"));
+observer.observe(document.getElementById("section-layer4"));
+observer.observe(document.getElementById("section-layer5"));
+observer.observe(document.getElementById("section-layer6"));
+observer.observe(document.getElementById("section-layer7"));
+observer.observe(document.getElementById("section-layer8"));
+observer.observe(document.getElementById("section-layer9"));
+observer.observe(document.getElementById("section-layer10"));
+
+// ============================================================
+// CONTROLS
+// ============================================================
+document.getElementById("btn-replay").addEventListener("click", () => {
+  if (currentLayer === 1) playLayer1();
+  else if (currentLayer === 2) playLayer2();
+  else if (currentLayer === 3) playLayer3();
+  else if (currentLayer === 4) playLayer4();
+  else if (currentLayer === 5) playLayer5();
+  else if (currentLayer === 6) playLayer6();
+  else if (currentLayer === 7) playLayer7();
+  else if (currentLayer === 8) playLayer8();
+  else if (currentLayer === 9) playLayer9();
+  else if (currentLayer === 10) playLayer10();
+});
+
+// Layer indicator dot clicks
+document.querySelectorAll("#layer-indicator .dot").forEach(dot => {
+  dot.addEventListener("click", () => {
+    const layer = +dot.dataset.layer;
+    const target = document.getElementById(`section-layer${layer}`);
+    target.scrollIntoView({ behavior: "smooth" });
+  });
+});
+
+// ============================================================
+// RESIZE
+// ============================================================
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    setupSVG();
+    if (currentLayer === 1) playLayer1();
+    else if (currentLayer === 2) playLayer2();
+    else if (currentLayer === 3) playLayer3();
+    else if (currentLayer === 4) playLayer4();
+    else if (currentLayer === 5) playLayer5();
+    else if (currentLayer === 6) playLayer6();
+    else if (currentLayer === 7) playLayer7();
+    else if (currentLayer === 8) playLayer8();
+    else if (currentLayer === 9) playLayer9();
+    else if (currentLayer === 10) playLayer10();
+  }, 300);
+});
+
+// ============================================================
+// INIT — auto-play Layer 1
+// ============================================================
+window.addEventListener("load", () => {
+  d3.timeout(playLayer1, 400);
+});
+</script>
+</body>
+</html>
